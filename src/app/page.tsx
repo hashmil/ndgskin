@@ -12,6 +12,7 @@ import * as THREE from "three";
 import { ChangeableModel } from "@/components/ChangeableModel";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { useViewportHeight } from "@/hooks/useViewportHeight";
+import PasswordProtection from "@/components/PasswordProtection";
 
 const ErrorBoundary = dynamic(
   () => import("react-error-boundary").then((mod) => mod.ErrorBoundary),
@@ -129,6 +130,7 @@ export default function Home() {
   const viewportHeight = useViewportHeight();
   const [showSpinner, setShowSpinner] = useState(false);
   const [textureUrl, setTextureUrl] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const {
     modelScale,
@@ -261,63 +263,83 @@ export default function Home() {
   console.log("Current showSpinner state:", showSpinner);
 
   return (
-    <div
-      className="relative w-screen overflow-hidden bg-black"
-      style={{ height: `calc(var(--vh, 1vh) * 100)` }}>
-      <ErrorBoundary FallbackComponent={ErrorFallback}>
-        <Canvas
-          className="!absolute top-0 left-0 w-full h-full"
-          style={{ background: "#464646" }}>
-          <CameraController />
-          <ambientLight intensity={0.5} />
-          <LightWithHelper
-            position={new Vector3(lightPosX, lightPosY, lightPosZ)}
-            target={new Vector3(lightTargetX, lightTargetY, lightTargetZ)}
-            intensity={lightIntensity}
-          />
-          <Suspense fallback={null}>
-            <ChangeableModel
-              url="/NDG_v1.glb"
-              scale={modelScale}
-              position={new Vector3(modelPosX, modelPosY, modelPosZ)}
-              mobilePosition={
-                new Vector3(modelPosX, modelPosY + 0.5, modelPosZ)
-              }
-              rotation={new Euler(modelRotX, modelRotY, modelRotZ)}
-              textureUrl={textureUrl}
-              onTextureLoaded={handleTextureLoaded}
-              isLoadingTexture={isLoading}
+    <>
+      {!isAuthenticated ? (
+        <PasswordProtection
+          onCorrectPassword={() => setIsAuthenticated(true)}
+        />
+      ) : (
+        <div
+          className="relative w-screen overflow-hidden bg-black"
+          style={{ height: `calc(var(--vh, 1vh) * 100)` }}>
+          <div className="absolute top-0 left-0 w-full p-4 flex justify-between z-10">
+            <img
+              src="/lionx_logo.png"
+              alt="LionX Logo"
+              className="h-12 object-contain"
             />
-          </Suspense>
-        </Canvas>
-      </ErrorBoundary>
+            <img
+              src="/ndg_logo.png"
+              alt="NDG Logo"
+              className="h-12 object-contain"
+            />
+          </div>
+          <ErrorBoundary FallbackComponent={ErrorFallback}>
+            <Canvas
+              className="!absolute top-0 left-0 w-full h-full"
+              style={{ background: "#464646" }}>
+              <CameraController />
+              <ambientLight intensity={0.5} />
+              <LightWithHelper
+                position={new Vector3(lightPosX, lightPosY, lightPosZ)}
+                target={new Vector3(lightTargetX, lightTargetY, lightTargetZ)}
+                intensity={lightIntensity}
+              />
+              <Suspense fallback={null}>
+                <ChangeableModel
+                  url="/NDG_v1.glb"
+                  scale={modelScale}
+                  position={new Vector3(modelPosX, modelPosY, modelPosZ)}
+                  mobilePosition={
+                    new Vector3(modelPosX, modelPosY + 0.5, modelPosZ)
+                  }
+                  rotation={new Euler(modelRotX, modelRotY, modelRotZ)}
+                  textureUrl={textureUrl}
+                  onTextureLoaded={handleTextureLoaded}
+                  isLoadingTexture={isLoading}
+                />
+              </Suspense>
+            </Canvas>
+          </ErrorBoundary>
 
-      <div className="absolute left-1/2 transform -translate-x-1/2 w-full max-w-3xl px-4 bottom-2 sm:bottom-5">
-        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-          <input
-            type="text"
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={handleInputKeyDown}
-            placeholder="Describe your pattern"
-            className="w-full sm:flex-grow py-3 px-4 bg-gray-200 text-black rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <button
-            onClick={handleGenerateSkin}
-            disabled={isGenerating || isLoading}
-            className="w-full sm:w-auto bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 whitespace-nowrap">
-            {isGenerating ? "Generating..." : "Generate skin"}
-          </button>
-        </div>
-      </div>
+          <div className="absolute left-1/2 transform -translate-x-1/2 w-full max-w-3xl px-4 bottom-2 sm:bottom-5">
+            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+              <input
+                type="text"
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                onKeyDown={handleInputKeyDown}
+                placeholder="Describe your pattern"
+                className="w-full sm:flex-grow py-3 px-4 bg-gray-200 text-black rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                onClick={handleGenerateSkin}
+                disabled={isGenerating || isLoading}
+                className="w-full sm:w-auto bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 whitespace-nowrap">
+                {isGenerating ? "Generating..." : "Generate skin"}
+              </button>
+            </div>
+          </div>
 
-      {showSpinner && (
-        <div className="loading-spinner-container">
-          <div className="loading-spinner"></div>
+          {showSpinner && (
+            <div className="loading-spinner-container">
+              <div className="loading-spinner"></div>
+            </div>
+          )}
+
+          <Leva hidden />
         </div>
       )}
-
-      <Leva hidden />
-    </div>
+    </>
   );
 }
