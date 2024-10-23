@@ -64,3 +64,8 @@ canvas {
   display: block;
   height: 100vh !important;
 }
+
+/* Add any custom styles here if needed */
+.custom-input-shadow {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}

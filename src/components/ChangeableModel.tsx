@@ -19,8 +19,9 @@ type ChangeableModelProps = {
   url: string;
   scale?: number;
   position?: Vector3;
+  mobilePosition?: Vector3; // New prop for mobile positioning
   rotation?: Euler;
-  textureUrl?: string | null; // Updated to accept string, undefined, or null
+  textureUrl?: string;
 };
 
 const targetMeshNames = [
@@ -34,12 +35,14 @@ export function ChangeableModel({
   url,
   scale = 1,
   position = new Vector3(0, 0, 0),
+  mobilePosition, // New prop
   rotation = new Euler(0, 0, 0),
   textureUrl,
 }: ChangeableModelProps) {
   const gltf = useLoader(GLTFLoader, url);
   const [targetMeshes, setTargetMeshes] = useState<Mesh[]>([]);
   const [currentTexture, setCurrentTexture] = useState<Texture | null>(null);
+  const [currentPosition, setCurrentPosition] = useState(position);
 
   // Find target meshes
   useEffect(() => {
@@ -112,8 +115,23 @@ export function ChangeableModel({
     }
   }, [currentTexture, targetMeshes]);
 
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 640 && mobilePosition) {
+        setCurrentPosition(mobilePosition);
+      } else {
+        setCurrentPosition(position);
+      }
+    };
+
+    handleResize(); // Set initial position
+    window.addEventListener("resize", handleResize);
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, [position, mobilePosition]);
+
   return (
-    <group scale={scale} position={position} rotation={rotation}>
+    <group scale={scale} position={currentPosition} rotation={rotation}>
       <primitive object={gltf.scene} />
     </group>
   );

@@ -11,6 +11,7 @@ import { Vector3, Euler, PerspectiveCamera } from "three";
 import * as THREE from "three";
 import { ChangeableModel } from "@/components/ChangeableModel";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
+import { useViewportHeight } from "@/hooks/useViewportHeight";
 
 const ErrorBoundary = dynamic(
   () => import("react-error-boundary").then((mod) => mod.ErrorBoundary),
@@ -123,6 +124,7 @@ export default function Home() {
     null
   );
   const store = useCreateStore();
+  const viewportHeight = useViewportHeight();
 
   const {
     modelScale,
@@ -237,7 +239,9 @@ export default function Home() {
   };
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden">
+    <div
+      className="relative w-screen overflow-hidden bg-black"
+      style={{ height: `calc(var(--vh, 1vh) * 100)` }}>
       <ErrorBoundary FallbackComponent={ErrorFallback}>
         <Canvas
           className="!absolute top-0 left-0 w-full h-full"
@@ -253,31 +257,33 @@ export default function Home() {
             <ChangeableModel
               url="/NDG_v1.glb"
               scale={modelScale}
-              position={modelPosition}
+              position={new Vector3(modelPosX, modelPosY, modelPosZ)}
+              mobilePosition={
+                new Vector3(modelPosX, modelPosY + 0.5, modelPosZ)
+              }
               rotation={new Euler(modelRotX, modelRotY, modelRotZ)}
-              textureUrl={generatedTextureUrl} // Pass the generated texture URL
+              textureUrl={generatedTextureUrl}
             />
           </Suspense>
         </Canvas>
       </ErrorBoundary>
       <div
-        className="absolute left-1/2 transform -translate-x-1/2 
-                   bottom-24 sm:bottom-28 md:bottom-32 lg:bottom-36
-                   bg-white text-white font-bold py-2 px-4 rounded
-                   shadow-lg transition duration-300 ease-in-out z-10">
+        className="absolute left-1/2 transform -translate-x-1/2 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 w-full max-w-3xl px-4 bottom-2 sm:bottom-5"
+        style={{
+          bottom: `max(${viewportHeight * 0.02}px, 10px)`,
+        }}>
         <input
           type="text"
-          placeholder="Describe your pattern"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          className="px-4 py-2 border rounded"
+          placeholder="Describe your pattern"
+          className="w-full sm:flex-grow py-3 px-4 bg-gray-200 text-black rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <button
-          className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded shadow-lg transition duration-300 ease-in-out"
           onClick={handleGenerateSkin}
-          disabled={isGenerating} // Disable button while generating
-        >
-          {isGenerating ? "Generating..." : "Generate Skin"}
+          disabled={isGenerating}
+          className="w-full sm:w-auto bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 whitespace-nowrap">
+          {isGenerating ? "Generating..." : "Generate skin"}
         </button>
       </div>
       <Leva hidden />
