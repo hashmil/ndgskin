@@ -55,8 +55,11 @@ export const ChangeableModel = React.memo(function ChangeableModel({
     return (
       <Html center>
         <div
-          className="loading-spinner-container"
-          style={{ position: "absolute" }}>
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}>
           <div className="loading-spinner"></div>
         </div>
       </Html>

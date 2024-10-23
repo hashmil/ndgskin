@@ -306,7 +306,17 @@ export default function Home() {
               <Suspense
                 fallback={
                   <Html center>
-                    <div className="loading-spinner-container">
+                    <div
+                      style={{
+                        position: "fixed",
+                        top: "50%",
+                        left: "50%",
+                        transform: "translate(-50%, -50%)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        height: "100vh", // Ensure it takes full viewport height
+                      }}>
                       <div className="loading-spinner"></div>
                     </div>
                   </Html>
