@@ -10,6 +10,7 @@ import {
   RepeatWrapping,
   NearestFilter,
   Texture,
+  Object3D,
 } from "three";
 
 type ChangeableModelProps = {
@@ -80,8 +81,8 @@ export function ChangeableModel({
   useEffect(() => {
     if (gltf) {
       const meshes: Mesh[] = [];
-      gltf.scene.traverse((child) => {
-        if (child.isMesh && targetMeshNames.includes(child.name)) {
+      gltf.scene.traverse((child: Object3D) => {
+        if ((child as Mesh).isMesh && targetMeshNames.includes(child.name)) {
           console.log("Target mesh found:", child.name);
           meshes.push(child as Mesh);
         }

@@ -1,14 +1,14 @@
 "use client";
 
 import { Canvas, useThree } from "@react-three/fiber";
-import { OrbitControls, Grid, useHelper } from "@react-three/drei";
-import { Model } from "@/components/Model";
+import { OrbitControls } from "@react-three/drei";
 import { Suspense, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { useControls, folder, button, Leva, useCreateStore } from "leva";
-import { Vector3, Euler } from "three";
-import { DirectionalLight, DirectionalLightHelper } from "three";
+import { useControls, folder, Leva, useCreateStore } from "leva";
+import { Vector3, Euler, PerspectiveCamera } from "three";
+import * as THREE from "three";
 import { ChangeableModel } from "@/components/ChangeableModel";
+import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 
 const ErrorBoundary = dynamic(
   () => import("react-error-boundary").then((mod) => mod.ErrorBoundary),
@@ -26,7 +26,7 @@ function ErrorFallback({ error }: { error: Error }) {
 
 function CameraController() {
   const { camera } = useThree();
-  const controlsRef = useRef<OrbitControls>(null);
+  const controlsRef = useRef<OrbitControlsImpl>(null);
 
   const { posX, posY, posZ, rotX, rotY, rotZ, zoom, fov, height } = useControls(
     "Camera",
@@ -50,18 +50,17 @@ function CameraController() {
 
   useEffect(() => {
     if (camera && controlsRef.current) {
-      // Set camera properties
-      camera.fov = fov;
-      camera.updateProjectionMatrix();
+      if (camera instanceof PerspectiveCamera) {
+        camera.fov = fov;
+        camera.updateProjectionMatrix();
+      }
 
-      // Calculate camera position based on zoom
       const direction = new Vector3(posX, posY, posZ).normalize();
       const distance = zoom;
       const newPosition = new Vector3(0, height, 0).add(
         direction.multiplyScalar(distance)
       );
 
-      // Update camera and controls
       camera.position.copy(newPosition);
       controlsRef.current.object.position.copy(newPosition);
       controlsRef.current.target.set(0, height, 0);
@@ -72,7 +71,7 @@ function CameraController() {
   return (
     <OrbitControls
       ref={controlsRef}
-      args={[camera, camera.domElement]}
+      args={[camera as PerspectiveCamera]}
       enableZoom={true}
       zoomSpeed={0.5}
       enablePan={true}
@@ -86,11 +85,19 @@ function CameraController() {
   );
 }
 
-function LightWithHelper({ position, target, intensity }) {
-  const lightRef = useRef<DirectionalLight>();
-  const targetRef = useRef<THREE.Object3D>();
-  // Remove this line:
-  // useHelper(lightRef, DirectionalLightHelper, 1, "red");
+interface LightWithHelperProps {
+  position: Vector3;
+  target: Vector3;
+  intensity: number;
+}
+
+function LightWithHelper({
+  position,
+  target,
+  intensity,
+}: LightWithHelperProps) {
+  const lightRef = useRef<THREE.DirectionalLight>(null);
+  const targetRef = useRef<THREE.Object3D>(null);
 
   return (
     <>
@@ -99,7 +106,7 @@ function LightWithHelper({ position, target, intensity }) {
         position={position}
         intensity={intensity}
         castShadow
-        target={targetRef.current}
+        target={targetRef.current || undefined}
       />
       <object3D ref={targetRef} position={target} />
     </>
@@ -107,8 +114,8 @@ function LightWithHelper({ position, target, intensity }) {
 }
 
 export default function Home() {
-  const [modelPosition, setModelPosition] = useState(new Vector3(0, 0.1, -0.0));
   const [currentSkin, setCurrentSkin] = useState(0);
+  const [modelPosition, setModelPosition] = useState(new Vector3(0, 0, 0));
   const store = useCreateStore();
 
   const {
@@ -168,7 +175,7 @@ export default function Home() {
   }, [modelPosX, modelPosY, modelPosZ]);
 
   const handleChangeSkin = () => {
-    setCurrentSkin((prev) => (prev + 1) % 6); // Cycle through 6 skins
+    setCurrentSkin((prev) => (prev + 1) % 6);
   };
 
   return (
@@ -180,8 +187,8 @@ export default function Home() {
           <CameraController />
           <ambientLight intensity={0.5} />
           <LightWithHelper
-            position={[lightPosX, lightPosY, lightPosZ]}
-            target={[lightTargetX, lightTargetY, lightTargetZ]}
+            position={new Vector3(lightPosX, lightPosY, lightPosZ)}
+            target={new Vector3(lightTargetX, lightTargetY, lightTargetZ)}
             intensity={lightIntensity}
           />
           <Suspense fallback={null}>
@@ -202,7 +209,7 @@ export default function Home() {
         onClick={handleChangeSkin}>
         Change Skin
       </button>
-      <Leva hidden store={store} />
+      <Leva hidden />
     </div>
   );
 }

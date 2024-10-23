@@ -19,6 +19,9 @@ RUN npm ci
 # Copy the rest of your app's source code
 COPY . .
 
+# Copy TypeScript configuration
+COPY tsconfig.json ./
+
 # Build your Next.js app
 RUN npm run build
 
