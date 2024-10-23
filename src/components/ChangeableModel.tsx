@@ -16,16 +16,16 @@ import {
 } from "three";
 import { Html } from "@react-three/drei";
 
-type ChangeableModelProps = {
+interface ChangeableModelProps {
   url: string;
-  scale?: number;
-  position?: Vector3;
-  mobilePosition?: Vector3; // New prop for mobile positioning
-  rotation?: Euler;
-  textureUrl?: string | null; // Update this line
+  scale: number;
+  position: Vector3;
+  mobilePosition: Vector3;
+  rotation: Euler;
+  textureUrl: string | null;
   isLoadingTexture: boolean; // Add this line
-  onTextureLoaded: () => void; // Add this line
-};
+  onTextureLoaded: () => void;
+}
 
 const targetMeshNames = [
   "base-bottom",

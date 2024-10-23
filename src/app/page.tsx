@@ -286,6 +286,7 @@ export default function Home() {
               rotation={new Euler(modelRotX, modelRotY, modelRotZ)}
               textureUrl={textureUrl}
               onTextureLoaded={handleTextureLoaded}
+              isLoadingTexture={isLoading}
             />
           </Suspense>
         </Canvas>
