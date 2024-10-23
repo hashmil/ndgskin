@@ -14,6 +14,7 @@ import {
   Texture,
   Object3D,
 } from "three";
+import { Html } from "@react-three/drei";
 
 type ChangeableModelProps = {
   url: string;
@@ -22,6 +23,8 @@ type ChangeableModelProps = {
   mobilePosition?: Vector3; // New prop for mobile positioning
   rotation?: Euler;
   textureUrl?: string | null; // Update this line
+  isLoadingTexture: boolean; // Add this line
+  onTextureLoaded: () => void; // Add this line
 };
 
 const targetMeshNames = [
@@ -31,13 +34,15 @@ const targetMeshNames = [
   "main-section",
 ];
 
-export function ChangeableModel({
+export const ChangeableModel = React.memo(function ChangeableModel({
   url,
   scale = 1,
   position = new Vector3(0, 0, 0),
   mobilePosition, // New prop
   rotation = new Euler(0, 0, 0),
   textureUrl,
+  isLoadingTexture,
+  onTextureLoaded,
 }: ChangeableModelProps) {
   const gltf = useLoader(GLTFLoader, url);
   const [targetMeshes, setTargetMeshes] = useState<Mesh[]>([]);
@@ -60,26 +65,30 @@ export function ChangeableModel({
 
   // Load generated texture when textureUrl changes
   useEffect(() => {
-    if (textureUrl) {
+    if (textureUrl && textureUrl !== currentTexture?.userData?.url) {
       const loader = new TextureLoader();
       loader.load(
         textureUrl,
         (loadedTexture) => {
           loadedTexture.wrapS = loadedTexture.wrapT = RepeatWrapping;
           loadedTexture.minFilter = loadedTexture.magFilter = NearestFilter;
-          loadedTexture.repeat.set(1, 1); // Adjust as needed
+          loadedTexture.repeat.set(1, 1);
+          loadedTexture.userData = { url: textureUrl };
           setCurrentTexture(loadedTexture);
           console.log("Generated texture loaded successfully");
+          onTextureLoaded();
         },
         undefined,
         (error) => {
           console.error("Error loading generated texture:", error);
+          onTextureLoaded();
         }
       );
-    } else {
+    } else if (!textureUrl) {
       setCurrentTexture(null);
+      onTextureLoaded();
     }
-  }, [textureUrl]);
+  }, [textureUrl, onTextureLoaded]);
 
   // Apply current texture or default material to target meshes
   useEffect(() => {
@@ -130,9 +139,33 @@ export function ChangeableModel({
     return () => window.removeEventListener("resize", handleResize);
   }, [position, mobilePosition]);
 
+  useEffect(() => {
+    if (currentTexture && targetMeshes.length > 0) {
+      console.log("Applying texture to meshes");
+      targetMeshes.forEach((mesh) => {
+        if (mesh.material instanceof MeshStandardMaterial) {
+          if (mesh.material.map !== currentTexture) {
+            console.log(`Applying new texture to mesh ${mesh.name}`);
+            mesh.material.map = currentTexture;
+            mesh.material.needsUpdate = true;
+          }
+        }
+      });
+      console.log("Calling onTextureLoaded");
+      onTextureLoaded();
+    }
+  }, [currentTexture, targetMeshes, onTextureLoaded]);
+
   return (
     <group scale={scale} position={currentPosition} rotation={rotation}>
       <primitive object={gltf.scene} />
+      {isLoadingTexture && (
+        <Html center>
+          <div className="loading-spinner-container">
+            <div className="loading-spinner"></div>
+          </div>
+        </Html>
+      )}
     </group>
   );
-}
+});

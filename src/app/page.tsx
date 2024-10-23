@@ -3,8 +3,8 @@
 "use client";
 
 import { Canvas, useThree } from "@react-three/fiber";
-import { OrbitControls } from "@react-three/drei";
-import { Suspense, useEffect, useRef, useState } from "react";
+import { OrbitControls, Grid, useHelper } from "@react-three/drei";
+import { Suspense, useEffect, useRef, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { useControls, folder, Leva, useCreateStore } from "leva";
 import { Vector3, Euler, PerspectiveCamera } from "three";
@@ -123,8 +123,12 @@ export default function Home() {
   const [generatedTextureUrl, setGeneratedTextureUrl] = useState<string | null>(
     null
   );
+  const [isLoadingTexture, setIsLoadingTexture] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const store = useCreateStore();
   const viewportHeight = useViewportHeight();
+  const [showSpinner, setShowSpinner] = useState(false);
+  const [textureUrl, setTextureUrl] = useState<string | null>(null);
 
   const {
     modelScale,
@@ -183,7 +187,11 @@ export default function Home() {
   }, [modelPosX, modelPosY, modelPosZ]);
 
   const handleGenerateSkin = async () => {
+    console.log("Starting generation process");
     setIsGenerating(true);
+    setShowSpinner(true);
+    console.log("Spinner should be visible now");
+
     try {
       // Step 1: Use OpenAI to convert user input to a seamless pattern prompt
       const openAIResponse = await fetch("/api/generatePrompt", {
@@ -225,14 +233,13 @@ export default function Home() {
       const generatedTextureUrl = images[0].url;
       console.log("Generated texture URL:", generatedTextureUrl);
 
-      // Update the state with the new texture URL
-      setGeneratedTextureUrl(generatedTextureUrl);
+      // After successfully generating the texture URL
+      setTextureUrl(generatedTextureUrl);
+      console.log("Texture URL set, waiting for texture to load");
     } catch (error: any) {
       console.error("Error generating skin:", error);
-      if (error instanceof Error) {
-        console.error("Error message:", error.message);
-        console.error("Error stack:", error.stack);
-      }
+      setShowSpinner(false);
+      console.log("Spinner hidden due to error");
     } finally {
       setIsGenerating(false);
     }
@@ -243,6 +250,15 @@ export default function Home() {
       handleGenerateSkin();
     }
   };
+
+  const handleTextureLoaded = useCallback(() => {
+    console.log("Texture loaded and applied");
+    setIsLoading(false);
+    setShowSpinner(false);
+    console.log("Spinner should be hidden now");
+  }, []);
+
+  console.log("Current showSpinner state:", showSpinner);
 
   return (
     <div
@@ -268,31 +284,38 @@ export default function Home() {
                 new Vector3(modelPosX, modelPosY + 0.5, modelPosZ)
               }
               rotation={new Euler(modelRotX, modelRotY, modelRotZ)}
-              textureUrl={generatedTextureUrl}
+              textureUrl={textureUrl}
+              onTextureLoaded={handleTextureLoaded}
             />
           </Suspense>
         </Canvas>
       </ErrorBoundary>
-      <div
-        className="absolute left-1/2 transform -translate-x-1/2 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 w-full max-w-3xl px-4 bottom-2 sm:bottom-5"
-        style={{
-          bottom: `max(${viewportHeight * 0.02}px, 10px)`,
-        }}>
-        <input
-          type="text"
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          onKeyDown={handleInputKeyDown}
-          placeholder="Describe your pattern"
-          className="w-full sm:flex-grow py-3 px-4 bg-gray-200 text-black rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <button
-          onClick={handleGenerateSkin}
-          disabled={isGenerating}
-          className="w-full sm:w-auto bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 whitespace-nowrap">
-          {isGenerating ? "Generating..." : "Generate skin"}
-        </button>
+
+      <div className="absolute left-1/2 transform -translate-x-1/2 w-full max-w-3xl px-4 bottom-2 sm:bottom-5">
+        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+          <input
+            type="text"
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={handleInputKeyDown}
+            placeholder="Describe your pattern"
+            className="w-full sm:flex-grow py-3 px-4 bg-gray-200 text-black rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <button
+            onClick={handleGenerateSkin}
+            disabled={isGenerating || isLoading}
+            className="w-full sm:w-auto bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 whitespace-nowrap">
+            {isGenerating ? "Generating..." : "Generate skin"}
+          </button>
+        </div>
       </div>
+
+      {showSpinner && (
+        <div className="loading-spinner-container">
+          <div className="loading-spinner"></div>
+        </div>
+      )}
+
       <Leva hidden />
     </div>
   );
