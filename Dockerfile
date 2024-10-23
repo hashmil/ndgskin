@@ -7,6 +7,9 @@ WORKDIR /app
 # Copy package.json and package-lock.json
 COPY package*.json ./
 
+# Copy ESLint configuration
+COPY .eslintrc.json ./
+
 # Install dependencies
 RUN npm ci
 
