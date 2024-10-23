@@ -48,8 +48,28 @@ export const ChangeableModel = React.memo(function ChangeableModel({
   const [currentPosition, setCurrentPosition] = useState(position);
 
   useEffect(() => {
-    // Your position update logic here
+    const isMobile = window.innerWidth < 640; // SM breakpoint in Tailwind
+    setCurrentPosition(isMobile ? mobilePosition : position);
   }, [position, mobilePosition]);
+
+  useEffect(() => {
+    if (textureUrl && gltf) {
+      const texture = new TextureLoader().load(textureUrl, () => {
+        texture.wrapS = RepeatWrapping;
+        texture.wrapT = RepeatWrapping;
+        texture.magFilter = NearestFilter;
+
+        gltf.scene.traverse((child: Object3D) => {
+          if ((child as Mesh).isMesh && targetMeshNames.includes(child.name)) {
+            const material = (child as Mesh).material as MeshStandardMaterial;
+            material.map = texture;
+            material.needsUpdate = true;
+          }
+        });
+        onTextureLoaded();
+      });
+    }
+  }, [textureUrl, gltf, onTextureLoaded]);
 
   if (!gltf) {
     return (
@@ -69,13 +89,6 @@ export const ChangeableModel = React.memo(function ChangeableModel({
   return (
     <group scale={scale} position={currentPosition} rotation={rotation}>
       <primitive object={gltf.scene} />
-      {isLoadingTexture && (
-        <Html center>
-          <div className="loading-spinner-container">
-            <div className="loading-spinner"></div>
-          </div>
-        </Html>
-      )}
     </group>
   );
 });

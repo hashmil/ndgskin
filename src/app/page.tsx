@@ -62,20 +62,25 @@ function CameraController() {
 
   useEffect(() => {
     if (camera && controlsRef.current) {
+      const isMobile = window.innerWidth < 640;
+
       if (camera instanceof PerspectiveCamera) {
-        camera.fov = fov;
+        camera.fov = isMobile ? fov : fov; // Use same FOV for both
+        camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
       }
 
       const direction = new Vector3(posX, posY, posZ).normalize();
-      const distance = zoom;
-      const newPosition = new Vector3(0, height, 0).add(
-        direction.multiplyScalar(distance)
-      );
+      const distance = isMobile ? zoom : zoom; // Use same zoom for both
+      const newPosition = new Vector3(
+        0,
+        isMobile ? height : height, // Use same height for both
+        0
+      ).add(direction.multiplyScalar(distance));
 
       camera.position.copy(newPosition);
       controlsRef.current.object.position.copy(newPosition);
-      controlsRef.current.target.set(0, height, 0);
+      controlsRef.current.target.set(0, isMobile ? height : height, 0);
       controlsRef.current.update();
     }
   }, [camera, posX, posY, posZ, rotX, rotY, rotZ, zoom, fov, height]);
@@ -200,6 +205,7 @@ export default function Home() {
     console.log("Starting generation process");
     setIsGenerating(true);
     setShowSpinner(true);
+    setIsLoading(true); // Add this line
     console.log("Spinner should be visible now");
 
     try {
@@ -243,12 +249,12 @@ export default function Home() {
       const generatedTextureUrl = images[0].url;
       console.log("Generated texture URL:", generatedTextureUrl);
 
-      // After successfully generating the texture URL
       setTextureUrl(generatedTextureUrl);
       console.log("Texture URL set, waiting for texture to load");
     } catch (error: any) {
       console.error("Error generating skin:", error);
       setShowSpinner(false);
+      setIsLoading(false); // Add this line
       console.log("Spinner hidden due to error");
     } finally {
       setIsGenerating(false);
@@ -326,7 +332,7 @@ export default function Home() {
                   scale={modelScale}
                   position={new Vector3(modelPosX, modelPosY, modelPosZ)}
                   mobilePosition={
-                    new Vector3(modelPosX, modelPosY + 0.5, modelPosZ)
+                    new Vector3(modelPosX, modelPosY + 0.2, modelPosZ)
                   }
                   rotation={new Euler(modelRotX, modelRotY, modelRotZ)}
                   textureUrl={textureUrl}
