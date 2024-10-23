@@ -3,12 +3,9 @@ const nextConfig = {
   webpack: (config) => {
     config.module.rules.push({
       test: /\.(glb|gltf)$/,
-      use: {
-        loader: "file-loader",
-        options: {
-          publicPath: "/_next/static/images",
-          outputPath: "static/images/",
-        },
+      type: "asset/resource",
+      generator: {
+        filename: "static/chunks/[path][name].[hash][ext]",
       },
     });
     return config;

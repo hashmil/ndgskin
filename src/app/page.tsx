@@ -2,25 +2,16 @@
 
 "use client";
 
-import { Canvas, useThree } from "@react-three/fiber";
-import {
-  OrbitControls,
-  Grid,
-  useHelper,
-  Html,
-  useProgress,
-} from "@react-three/drei";
-import { Suspense, useEffect, useRef, useState, useCallback } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { useControls, folder, Leva, useCreateStore } from "leva";
-import { Vector3, Euler, PerspectiveCamera } from "three";
-import * as THREE from "three";
-import { ChangeableModel } from "@/components/ChangeableModel";
-import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
+import { Vector3, Euler } from "three";
 import { useViewportHeight } from "@/hooks/useViewportHeight";
 import PasswordProtection from "@/components/PasswordProtection";
 import AnimatedPlaceholder from "@/components/AnimatedPlaceholder";
 import TexturePanel from "@/components/TexturePanel";
+import SaveImageButton from "@/components/SaveImageButton";
+import Scene3D from "@/components/Scene3D";
 
 const ErrorBoundary = dynamic(
   () => import("react-error-boundary").then((mod) => mod.ErrorBoundary),
@@ -36,99 +27,6 @@ function ErrorFallback({ error }: { error: Error }) {
   );
 }
 
-function CameraController() {
-  const { camera } = useThree();
-  const controlsRef = useRef<OrbitControlsImpl>(null);
-
-  const { posX, posY, posZ, rotX, rotY, rotZ, zoom, fov, height } = useControls(
-    "Camera",
-    {
-      position: folder({
-        posX: { value: -4.8, min: -20, max: 20, step: 0.1 },
-        posY: { value: 3.1, min: -20, max: 20, step: 0.1 },
-        posZ: { value: 13.5, min: -20, max: 20, step: 0.1 },
-      }),
-      rotation: folder({
-        rotX: { value: -0.2, min: -Math.PI, max: Math.PI, step: 0.01 },
-        rotY: { value: -0.3, min: -Math.PI, max: Math.PI, step: 0.01 },
-        rotZ: { value: 0.0, min: -Math.PI, max: Math.PI, step: 0.01 },
-      }),
-      zoom: { value: 23.3, min: 0.1, max: 50, step: 0.1 },
-      fov: { value: 11, min: 10, max: 100, step: 1 },
-      height: { value: 1.0, min: -10, max: 20, step: 0.1 },
-    },
-    { collapsed: true }
-  );
-
-  useEffect(() => {
-    if (camera && controlsRef.current) {
-      const isMobile = window.innerWidth < 640;
-
-      if (camera instanceof PerspectiveCamera) {
-        camera.fov = isMobile ? fov : fov; // Use same FOV for both
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-      }
-
-      const direction = new Vector3(posX, posY, posZ).normalize();
-      const distance = isMobile ? zoom : zoom; // Use same zoom for both
-      const newPosition = new Vector3(
-        0,
-        isMobile ? height : height, // Use same height for both
-        0
-      ).add(direction.multiplyScalar(distance));
-
-      camera.position.copy(newPosition);
-      controlsRef.current.object.position.copy(newPosition);
-      controlsRef.current.target.set(0, isMobile ? height : height, 0);
-      controlsRef.current.update();
-    }
-  }, [camera, posX, posY, posZ, rotX, rotY, rotZ, zoom, fov, height]);
-
-  return (
-    <OrbitControls
-      ref={controlsRef}
-      args={[camera as PerspectiveCamera]}
-      enableZoom={false}
-      enablePan={true}
-      panSpeed={0.5}
-      enableRotate={true}
-      rotateSpeed={0.5}
-      minDistance={zoom}
-      maxDistance={zoom}
-      target={new Vector3(0, height, 0)}
-    />
-  );
-}
-
-interface LightWithHelperProps {
-  position: Vector3;
-  target: Vector3;
-  intensity: number;
-}
-
-function LightWithHelper({
-  position,
-  target,
-  intensity,
-}: LightWithHelperProps) {
-  const lightRef = useRef<THREE.DirectionalLight>(null);
-  const targetRef = useRef<THREE.Object3D>(null);
-
-  return (
-    <>
-      <directionalLight
-        ref={lightRef}
-        position={position}
-        intensity={intensity}
-        castShadow
-        target={targetRef.current || undefined}
-      />
-      <object3D ref={targetRef} position={target} />
-    </>
-  );
-}
-
 export default function Home() {
   const store = useCreateStore();
   const [modelPosition, setModelPosition] = useState(new Vector3(0, 0, 0));
@@ -139,9 +37,11 @@ export default function Home() {
   const [showSpinner, setShowSpinner] = useState(false);
   const [textureUrl, setTextureUrl] = useState<string | null>(null);
   const [generatedPrompt, setGeneratedPrompt] = useState("");
-
-  // Change this to default to false
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [captureFunction, setCaptureFunction] = useState<(() => string) | null>(
+    null
+  );
+  const viewportHeight = useViewportHeight();
 
   // Add this effect for client-side authentication check
   useEffect(() => {
@@ -286,8 +186,21 @@ export default function Home() {
 
   // console.log("Current showSpinner state:", showSpinner);
 
-  // Make sure this line is present
-  const viewportHeight = useViewportHeight();
+  const handleCaptureReady = useCallback((capture: () => string) => {
+    setCaptureFunction(() => capture);
+  }, []);
+
+  const handleSaveImage = () => {
+    if (!captureFunction) return;
+
+    const dataUrl = captureFunction();
+    const link = document.createElement("a");
+    link.href = dataUrl;
+    link.download = "ndg-skin-preview.png";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <>
@@ -296,69 +209,18 @@ export default function Home() {
           onCorrectPassword={() => setIsAuthenticated(true)}
         />
       ) : (
-        // Update this div to use the viewportHeight
         <div
-          className="relative w-screen bg-black overflow-y-auto"
-          style={{
-            height: `${viewportHeight}px`,
-            minHeight: "-webkit-fill-available",
-          }}>
-          <div className="absolute top-0 left-0 w-full p-4 flex justify-between z-10">
-            <img
-              src="/lionx_logo.png"
-              alt="LionX Logo"
-              className="h-12 object-contain"
-            />
-            <img
-              src="/ndg_logo.png"
-              alt="NDG Logo"
-              className="h-12 object-contain"
-            />
-          </div>
-          <ErrorBoundary FallbackComponent={ErrorFallback}>
-            <Canvas
-              className="!absolute top-0 left-0 w-full h-full"
-              style={{ background: "#464646" }}>
-              <CameraController />
-              <ambientLight intensity={0.5} />
-              <LightWithHelper
-                position={new Vector3(lightPosX, lightPosY, lightPosZ)}
-                target={new Vector3(lightTargetX, lightTargetY, lightTargetZ)}
-                intensity={lightIntensity}
-              />
-              <Suspense
-                fallback={
-                  <Html center>
-                    <div
-                      style={{
-                        position: "fixed",
-                        top: "50%",
-                        left: "50%",
-                        transform: "translate(-50%, -50%)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        height: "100vh", // Ensure it takes full viewport height
-                      }}>
-                      <div className="loading-spinner"></div>
-                    </div>
-                  </Html>
-                }>
-                <ChangeableModel
-                  url="/NDG_v1.glb"
-                  scale={modelScale}
-                  position={new Vector3(modelPosX, modelPosY, modelPosZ)}
-                  mobilePosition={
-                    new Vector3(modelPosX, modelPosY + 0.2, modelPosZ)
-                  }
-                  rotation={new Euler(modelRotX, modelRotY, modelRotZ)}
-                  textureUrl={textureUrl}
-                  onTextureLoaded={handleTextureLoaded}
-                  isLoadingTexture={isLoading}
-                />
-              </Suspense>
-            </Canvas>
-          </ErrorBoundary>
+          className="relative w-screen overflow-hidden bg-black"
+          style={{ height: `${viewportHeight}px` }}>
+          <Scene3D
+            textureUrl={textureUrl}
+            isLoadingTexture={isLoadingTexture}
+            onTextureLoaded={() => setIsLoadingTexture(false)}
+            onCaptureReady={handleCaptureReady}
+            modelPath="/NDG_v1.glb" // Make sure this path is correct
+          />
+
+          <TexturePanel prompt={generatedPrompt} textureUrl={textureUrl} />
 
           <div className="absolute left-1/2 transform -translate-x-1/2 w-full max-w-3xl px-4 bottom-4 sm:bottom-5">
             <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
@@ -368,22 +230,22 @@ export default function Home() {
                 onKeyDown={handleInputKeyDown}
                 className="w-full sm:flex-grow py-3 px-4 bg-gray-200 text-black rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              <button
-                onClick={handleGenerateSkin}
-                disabled={isGenerating || isLoading}
-                className="w-full sm:w-auto bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 whitespace-nowrap">
-                {isGenerating ? "Generating..." : "Generate skin"}
-              </button>
+              <div className="flex space-x-2">
+                <button
+                  onClick={handleGenerateSkin}
+                  disabled={isGenerating || isLoading}
+                  className="w-full sm:w-auto bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 whitespace-nowrap">
+                  {isGenerating ? "Generating..." : "Generate skin"}
+                </button>
+                {textureUrl && captureFunction && (
+                  <SaveImageButton
+                    onSave={handleSaveImage}
+                    className="whitespace-nowrap"
+                  />
+                )}
+              </div>
             </div>
           </div>
-
-          {showSpinner && (
-            <div className="loading-spinner-container">
-              <div className="loading-spinner"></div>
-            </div>
-          )}
-
-          <TexturePanel prompt={generatedPrompt} textureUrl={textureUrl} />
           <Leva hidden />
         </div>
       )}
