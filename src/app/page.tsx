@@ -20,7 +20,7 @@ import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { useViewportHeight } from "@/hooks/useViewportHeight";
 import PasswordProtection from "@/components/PasswordProtection";
 import AnimatedPlaceholder from "@/components/AnimatedPlaceholder";
-// import { Html } from "next/document";
+import TexturePanel from "@/components/TexturePanel";
 
 const ErrorBoundary = dynamic(
   () => import("react-error-boundary").then((mod) => mod.ErrorBoundary),
@@ -144,6 +144,7 @@ export default function Home() {
   const [showSpinner, setShowSpinner] = useState(false);
   const [textureUrl, setTextureUrl] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [generatedPrompt, setGeneratedPrompt] = useState<string>("");
 
   const {
     modelScale,
@@ -222,6 +223,7 @@ export default function Home() {
         "Using seamless pattern prompt for FAL AI:",
         seamlessPatternPrompt
       );
+      setGeneratedPrompt(seamlessPatternPrompt); // Add this line
 
       // Step 2: Send request to FAL AI to generate texture
       const falResponse = await fetch("/api/generateTexture", {
@@ -231,7 +233,7 @@ export default function Home() {
         },
         body: JSON.stringify({
           prompt: seamlessPatternPrompt,
-          seed: 6252023, // Optionally pass a seed value
+          // seed: 6252023, // Optionally pass a seed value
         }),
       });
 
@@ -274,7 +276,7 @@ export default function Home() {
     console.log("Spinner should be hidden now");
   }, []);
 
-  console.log("Current showSpinner state:", showSpinner);
+  // console.log("Current showSpinner state:", showSpinner);
 
   return (
     <>
@@ -366,6 +368,7 @@ export default function Home() {
             </div>
           )}
 
+          <TexturePanel prompt={generatedPrompt} textureUrl={textureUrl} />
           <Leva hidden />
         </div>
       )}

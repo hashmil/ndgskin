@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     const result = await fal.subscribe("fal-ai/flux-pro/v1.1", {
       input: {
         prompt,
-        seed: seed || Date.now(), // If seed is not provided, use the current timestamp
+        // seed: seed || Date.now(), // If seed is not provided, use the current timestamp
         image_size: "square_hd", // Set image size to square
         num_images: 1, // Adjust as necessary
       },
