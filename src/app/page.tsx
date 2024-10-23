@@ -203,7 +203,8 @@ export default function Home() {
         </Canvas>
       </ErrorBoundary>
       <button
-        className="absolute left-1/2 transform -translate-x-1/2 bottom-8 
+        className="absolute left-1/2 transform -translate-x-1/2 
+                   bottom-24 sm:bottom-28 md:bottom-32 lg:bottom-36
                    bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded
                    shadow-lg transition duration-300 ease-in-out z-10"
         onClick={handleChangeSkin}>
