@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     console.log("Calling FAL AI with prompt:", prompt);
 
     // models fal-ai/flux-pro/v1.1 or  fal-ai/fast-sdxl
-    const result = await fal.subscribe("fal-ai/fast-sdxl", {
+    const result = await fal.subscribe("fal-ai/flux-pro/v1.1", {
       input: {
         prompt,
         // seed: seed || Date.now(), // If seed is not provided, use the current timestamp

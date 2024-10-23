@@ -89,14 +89,13 @@ function CameraController() {
     <OrbitControls
       ref={controlsRef}
       args={[camera as PerspectiveCamera]}
-      enableZoom={true}
-      zoomSpeed={0.5}
+      enableZoom={false}
       enablePan={true}
       panSpeed={0.5}
       enableRotate={true}
       rotateSpeed={0.5}
-      minDistance={0.1}
-      maxDistance={100}
+      minDistance={zoom}
+      maxDistance={zoom}
       target={new Vector3(0, height, 0)}
     />
   );
