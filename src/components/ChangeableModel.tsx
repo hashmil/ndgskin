@@ -21,7 +21,7 @@ type ChangeableModelProps = {
   position?: Vector3;
   mobilePosition?: Vector3; // New prop for mobile positioning
   rotation?: Euler;
-  textureUrl?: string;
+  textureUrl?: string | null; // Update this line
 };
 
 const targetMeshNames = [
