@@ -140,6 +140,7 @@ export default function Home() {
   const [showSpinner, setShowSpinner] = useState(false);
   const [textureUrl, setTextureUrl] = useState<string | null>(null);
   const [generatedPrompt, setGeneratedPrompt] = useState("");
+
   // Change this to default to false
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
@@ -286,14 +287,20 @@ export default function Home() {
 
   // console.log("Current showSpinner state:", showSpinner);
 
+  // Make sure this line is present
+  const viewportHeight = useViewportHeight();
+
   return (
     <>
       {!isAuthenticated ? (
-        <PasswordProtection onCorrectPassword={handleCorrectPassword} />
+        <PasswordProtection
+          onCorrectPassword={() => setIsAuthenticated(true)}
+        />
       ) : (
+        // Update this div to use the viewportHeight
         <div
           className="relative w-screen overflow-hidden bg-black"
-          style={{ height: `calc(var(--vh, 1vh) * 100)` }}>
+          style={{ height: `${viewportHeight}px` }}>
           <div className="absolute top-0 left-0 w-full p-4 flex justify-between z-10">
             <img
               src="/lionx_logo.png"
@@ -351,7 +358,7 @@ export default function Home() {
             </Canvas>
           </ErrorBoundary>
 
-          <div className="absolute left-1/2 transform -translate-x-1/2 w-full max-w-3xl px-4 bottom-2 sm:bottom-5">
+          <div className="absolute left-1/2 transform -translate-x-1/2 w-full max-w-3xl px-4 bottom-4 sm:bottom-5">
             <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
               <AnimatedPlaceholder
                 value={prompt}
