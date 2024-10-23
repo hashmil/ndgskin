@@ -44,11 +44,15 @@ export const ChangeableModel = React.memo(function ChangeableModel({
   isLoadingTexture,
   onTextureLoaded,
 }: ChangeableModelProps) {
-  const { progress } = useProgress();
-  const gltf = useLoader(GLTFLoader, url);
+  const { progress, active } = useProgress();
+  const gltf = useLoader(GLTFLoader, url, undefined, (xhr) => {
+    const percentage = (xhr.loaded / xhr.total) * 100;
+    console.log("Loading progress:", percentage);
+  });
   const [targetMeshes, setTargetMeshes] = useState<Mesh[]>([]);
   const [currentTexture, setCurrentTexture] = useState<Texture | null>(null);
   const [currentPosition, setCurrentPosition] = useState(position);
+  const [displayProgress, setDisplayProgress] = useState(0);
 
   // Find target meshes
   useEffect(() => {
@@ -157,17 +161,30 @@ export const ChangeableModel = React.memo(function ChangeableModel({
     }
   }, [currentTexture, targetMeshes, onTextureLoaded]);
 
+  useEffect(() => {
+    const animateProgress = () => {
+      setDisplayProgress((prev) => {
+        const diff = progress - prev;
+        const step = Math.max(0.5, diff * 0.1);
+        return Math.min(progress, prev + step);
+      });
+    };
+
+    const interval = setInterval(animateProgress, 16);
+    return () => clearInterval(interval);
+  }, [progress]);
+
   if (!gltf) {
     return (
       <Html center>
         <div className="flex flex-col items-center justify-center">
           <div className="text-white text-lg font-bold mb-2">
-            {Math.round(progress)}%
+            {Math.round(displayProgress)}%
           </div>
           <div className="w-24 h-1 bg-gray-700 rounded-full">
             <div
-              className="h-full bg-white rounded-full transition-all duration-300"
-              style={{ width: `${progress}%` }}
+              className="h-full bg-white rounded-full transition-all duration-100"
+              style={{ width: `${displayProgress}%` }}
             />
           </div>
         </div>

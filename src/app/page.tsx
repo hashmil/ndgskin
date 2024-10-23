@@ -127,21 +127,35 @@ function LightWithHelper({
 
 function LoadingScreen() {
   const { progress, active } = useProgress();
+  const [displayProgress, setDisplayProgress] = useState(0);
 
   useEffect(() => {
-    console.log("Loading progress:", progress, "Active:", active);
-  }, [progress, active]);
+    // Smoothly animate the progress
+    const animateProgress = () => {
+      setDisplayProgress((prev) => {
+        const diff = progress - prev;
+        const step = Math.max(0.5, diff * 0.1); // Adjust step size for smoother animation
+        return Math.min(progress, prev + step);
+      });
+    };
+
+    const interval = setInterval(animateProgress, 16); // ~60fps
+
+    return () => clearInterval(interval);
+  }, [progress]);
+
+  if (!active && displayProgress === 100) return null;
 
   return (
     <Html center>
       <div className="flex flex-col items-center justify-center">
         <div className="text-white text-lg font-bold mb-2">
-          {Math.round(progress)}%
+          {Math.round(displayProgress)}%
         </div>
         <div className="w-24 h-1 bg-gray-700 rounded-full">
           <div
-            className="h-full bg-white rounded-full transition-all duration-300"
-            style={{ width: `${progress}%` }}
+            className="h-full bg-white rounded-full transition-all duration-100"
+            style={{ width: `${displayProgress}%` }}
           />
         </div>
       </div>
