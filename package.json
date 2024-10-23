@@ -12,6 +12,7 @@
     "@fal-ai/client": "^1.0.2",
     "@react-three/drei": "^9.114.6",
     "@react-three/fiber": "^8.17.10",
+    "framer-motion": "^11.11.9",
     "leva": "^0.9.35",
     "next": "14.1.0",
     "openai": "^4.68.2",
