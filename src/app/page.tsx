@@ -125,44 +125,6 @@ function LightWithHelper({
   );
 }
 
-function LoadingScreen() {
-  const { progress, active } = useProgress();
-  const [displayProgress, setDisplayProgress] = useState(0);
-
-  useEffect(() => {
-    // Smoothly animate the progress
-    const animateProgress = () => {
-      setDisplayProgress((prev) => {
-        const diff = progress - prev;
-        const step = Math.max(0.5, diff * 0.1); // Adjust step size for smoother animation
-        return Math.min(progress, prev + step);
-      });
-    };
-
-    const interval = setInterval(animateProgress, 16); // ~60fps
-
-    return () => clearInterval(interval);
-  }, [progress]);
-
-  if (!active && displayProgress === 100) return null;
-
-  return (
-    <Html center>
-      <div className="flex flex-col items-center justify-center">
-        <div className="text-white text-lg font-bold mb-2">
-          {Math.round(displayProgress)}%
-        </div>
-        <div className="w-24 h-1 bg-gray-700 rounded-full">
-          <div
-            className="h-full bg-white rounded-full transition-all duration-100"
-            style={{ width: `${displayProgress}%` }}
-          />
-        </div>
-      </div>
-    </Html>
-  );
-}
-
 export default function Home() {
   const [modelPosition, setModelPosition] = useState(new Vector3(0, 0, 0));
   const [prompt, setPrompt] = useState("");
@@ -341,7 +303,14 @@ export default function Home() {
                 target={new Vector3(lightTargetX, lightTargetY, lightTargetZ)}
                 intensity={lightIntensity}
               />
-              <Suspense fallback={<LoadingScreen />}>
+              <Suspense
+                fallback={
+                  <Html center>
+                    <div className="loading-spinner-container">
+                      <div className="loading-spinner"></div>
+                    </div>
+                  </Html>
+                }>
                 <ChangeableModel
                   url="/NDG_v1.glb"
                   scale={modelScale}

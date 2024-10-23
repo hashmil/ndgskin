@@ -51,16 +51,8 @@ export function Model({
   if (!gltf) {
     return (
       <Html center>
-        <div className="flex flex-col items-center justify-center">
-          <div className="text-white text-lg font-bold mb-2">
-            {Math.round(progress)}%
-          </div>
-          <div className="w-24 h-1 bg-gray-700 rounded-full">
-            <div
-              className="h-full bg-white rounded-full transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
+        <div className="loading-spinner-container">
+          <div className="loading-spinner"></div>
         </div>
       </Html>
     );
