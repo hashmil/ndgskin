@@ -13,6 +13,7 @@ import { ChangeableModel } from "@/components/ChangeableModel";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { useViewportHeight } from "@/hooks/useViewportHeight";
 import PasswordProtection from "@/components/PasswordProtection";
+import AnimatedPlaceholder from "@/components/AnimatedPlaceholder";
 
 const ErrorBoundary = dynamic(
   () => import("react-error-boundary").then((mod) => mod.ErrorBoundary),
@@ -314,12 +315,10 @@ export default function Home() {
 
           <div className="absolute left-1/2 transform -translate-x-1/2 w-full max-w-3xl px-4 bottom-2 sm:bottom-5">
             <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-              <input
-                type="text"
+              <AnimatedPlaceholder
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 onKeyDown={handleInputKeyDown}
-                placeholder="Describe your pattern"
                 className="w-full sm:flex-grow py-3 px-4 bg-gray-200 text-black rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <button
