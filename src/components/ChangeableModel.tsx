@@ -54,7 +54,9 @@ export const ChangeableModel = React.memo(function ChangeableModel({
   if (!gltf) {
     return (
       <Html center>
-        <div className="loading-spinner-container">
+        <div
+          className="loading-spinner-container"
+          style={{ position: "absolute" }}>
           <div className="loading-spinner"></div>
         </div>
       </Html>
