@@ -4,6 +4,9 @@ FROM node:18-alpine
 # Set the working directory
 WORKDIR /app
 
+# Install TypeScript globally
+RUN npm install -g typescript
+
 # Copy package.json and package-lock.json
 COPY package*.json ./
 

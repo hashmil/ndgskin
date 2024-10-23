@@ -26,7 +26,7 @@ function ErrorFallback({ error }: { error: Error }) {
 
 function CameraController() {
   const { camera } = useThree();
-  const controlsRef = useRef<OrbitControls>();
+  const controlsRef = useRef<OrbitControls>(null);
 
   const { posX, posY, posZ, rotX, rotY, rotZ, zoom, fov, height } = useControls(
     "Camera",
