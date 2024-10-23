@@ -3,7 +3,13 @@
 "use client";
 
 import { Canvas, useThree } from "@react-three/fiber";
-import { OrbitControls, Grid, useHelper } from "@react-three/drei";
+import {
+  OrbitControls,
+  Grid,
+  useHelper,
+  Html,
+  useProgress,
+} from "@react-three/drei";
 import { Suspense, useEffect, useRef, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { useControls, folder, Leva, useCreateStore } from "leva";
@@ -14,6 +20,7 @@ import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { useViewportHeight } from "@/hooks/useViewportHeight";
 import PasswordProtection from "@/components/PasswordProtection";
 import AnimatedPlaceholder from "@/components/AnimatedPlaceholder";
+// import { Html } from "next/document";
 
 const ErrorBoundary = dynamic(
   () => import("react-error-boundary").then((mod) => mod.ErrorBoundary),
@@ -115,6 +122,27 @@ function LightWithHelper({
       />
       <object3D ref={targetRef} position={target} />
     </>
+  );
+}
+
+function LoadingScreen() {
+  const { progress } = useProgress();
+  console.log("Loading progress:", progress); // Add this line
+
+  return (
+    <Html center>
+      <div className="flex flex-col items-center justify-center">
+        <div className="text-white text-lg font-bold mb-2">
+          {Math.round(progress)}%
+        </div>
+        <div className="w-24 h-1 bg-gray-700 rounded-full">
+          <div
+            className="h-full bg-white rounded-full transition-all duration-300"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+    </Html>
   );
 }
 
@@ -296,7 +324,7 @@ export default function Home() {
                 target={new Vector3(lightTargetX, lightTargetY, lightTargetZ)}
                 intensity={lightIntensity}
               />
-              <Suspense fallback={null}>
+              <Suspense fallback={<LoadingScreen />}>
                 <ChangeableModel
                   url="/NDG_v1.glb"
                   scale={modelScale}

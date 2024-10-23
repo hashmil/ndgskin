@@ -14,7 +14,7 @@ import {
   Texture,
   Object3D,
 } from "three";
-import { Html } from "@react-three/drei";
+import { Html, useProgress } from "@react-three/drei";
 
 interface ChangeableModelProps {
   url: string;
@@ -44,7 +44,10 @@ export const ChangeableModel = React.memo(function ChangeableModel({
   isLoadingTexture,
   onTextureLoaded,
 }: ChangeableModelProps) {
-  const gltf = useLoader(GLTFLoader, url);
+  const { progress } = useProgress();
+  const gltf = useLoader(GLTFLoader, url, undefined, () => {
+    return new Promise((resolve) => setTimeout(resolve, 2000)); // 2-second delay
+  });
   const [targetMeshes, setTargetMeshes] = useState<Mesh[]>([]);
   const [currentTexture, setCurrentTexture] = useState<Texture | null>(null);
   const [currentPosition, setCurrentPosition] = useState(position);
@@ -155,6 +158,24 @@ export const ChangeableModel = React.memo(function ChangeableModel({
       onTextureLoaded();
     }
   }, [currentTexture, targetMeshes, onTextureLoaded]);
+
+  if (!gltf) {
+    return (
+      <Html center>
+        <div className="flex flex-col items-center justify-center">
+          <div className="text-white text-lg font-bold mb-2">
+            {Math.round(progress)}%
+          </div>
+          <div className="w-24 h-1 bg-gray-700 rounded-full">
+            <div
+              className="h-full bg-white rounded-full transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+      </Html>
+    );
+  }
 
   return (
     <group scale={scale} position={currentPosition} rotation={rotation}>

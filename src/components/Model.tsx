@@ -3,8 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { useLoader } from "@react-three/fiber";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
-import { Html } from "@react-three/drei";
-import { Vector3, Box3, Box3Helper, Euler, Object3D, Mesh } from "three";
+import { Html, useProgress } from "@react-three/drei";
+import { Vector3, Euler, Object3D, Mesh } from "three";
 
 type ModelProps = {
   url: string;
@@ -20,6 +20,7 @@ export function Model({
   rotation = new Euler(0, 0, 0),
 }: ModelProps) {
   const [error, setError] = useState<string | null>(null);
+  const { progress } = useProgress();
 
   const gltf = useLoader(
     GLTFLoader,
@@ -48,7 +49,21 @@ export function Model({
   }
 
   if (!gltf) {
-    return <Html center>Loading model...</Html>;
+    return (
+      <Html center>
+        <div className="flex flex-col items-center justify-center">
+          <div className="text-white text-lg font-bold mb-2">
+            {Math.round(progress)}%
+          </div>
+          <div className="w-24 h-1 bg-gray-700 rounded-full">
+            <div
+              className="h-full bg-white rounded-full transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+      </Html>
+    );
   }
 
   return (
