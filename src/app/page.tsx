@@ -1,3 +1,5 @@
+// src/app/page.tsx
+
 "use client";
 
 import { Canvas, useThree } from "@react-three/fiber";
@@ -114,8 +116,12 @@ function LightWithHelper({
 }
 
 export default function Home() {
-  const [currentSkin, setCurrentSkin] = useState(0);
   const [modelPosition, setModelPosition] = useState(new Vector3(0, 0, 0));
+  const [prompt, setPrompt] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedTextureUrl, setGeneratedTextureUrl] = useState<string | null>(
+    null
+  );
   const store = useCreateStore();
 
   const {
@@ -174,8 +180,60 @@ export default function Home() {
     setModelPosition(new Vector3(modelPosX, modelPosY, modelPosZ));
   }, [modelPosX, modelPosY, modelPosZ]);
 
-  const handleChangeSkin = () => {
-    setCurrentSkin((prev) => (prev + 1) % 6);
+  const handleGenerateSkin = async () => {
+    setIsGenerating(true);
+    try {
+      // Step 1: Use OpenAI to convert user input to a seamless pattern prompt
+      const openAIResponse = await fetch("/api/generatePrompt", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ input: prompt }),
+      });
+      const { seamlessPatternPrompt } = await openAIResponse.json();
+      console.log(
+        "Using seamless pattern prompt for FAL AI:",
+        seamlessPatternPrompt
+      );
+
+      // Step 2: Send request to FAL AI to generate texture
+      const falResponse = await fetch("/api/generateTexture", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt: seamlessPatternPrompt,
+          seed: 6252023, // Optionally pass a seed value
+        }),
+      });
+
+      if (!falResponse.ok) {
+        const errorData = await falResponse.json();
+        throw new Error(errorData.error || "Failed to generate texture");
+      }
+
+      const { images } = await falResponse.json();
+
+      if (!images || images.length === 0) {
+        throw new Error("No images returned from FAL AI");
+      }
+
+      const generatedTextureUrl = images[0].url;
+      console.log("Generated texture URL:", generatedTextureUrl);
+
+      // Update the state with the new texture URL
+      setGeneratedTextureUrl(generatedTextureUrl);
+    } catch (error: any) {
+      console.error("Error generating skin:", error);
+      if (error instanceof Error) {
+        console.error("Error message:", error.message);
+        console.error("Error stack:", error.stack);
+      }
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -197,19 +255,31 @@ export default function Home() {
               scale={modelScale}
               position={modelPosition}
               rotation={new Euler(modelRotX, modelRotY, modelRotZ)}
-              currentSkin={currentSkin}
+              textureUrl={generatedTextureUrl} // Pass the generated texture URL
             />
           </Suspense>
         </Canvas>
       </ErrorBoundary>
-      <button
+      <div
         className="absolute left-1/2 transform -translate-x-1/2 
                    bottom-24 sm:bottom-28 md:bottom-32 lg:bottom-36
-                   bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded
-                   shadow-lg transition duration-300 ease-in-out z-10"
-        onClick={handleChangeSkin}>
-        Change Skin
-      </button>
+                   bg-white text-white font-bold py-2 px-4 rounded
+                   shadow-lg transition duration-300 ease-in-out z-10">
+        <input
+          type="text"
+          placeholder="Describe your pattern"
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          className="px-4 py-2 border rounded"
+        />
+        <button
+          className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded shadow-lg transition duration-300 ease-in-out"
+          onClick={handleGenerateSkin}
+          disabled={isGenerating} // Disable button while generating
+        >
+          {isGenerating ? "Generating..." : "Generate Skin"}
+        </button>
+      </div>
       <Leva hidden />
     </div>
   );

@@ -1,5 +1,7 @@
+// src/components/ChangeableModel.tsx
+
 import React, { useEffect, useState } from "react";
-import { useLoader, useThree } from "@react-three/fiber";
+import { useLoader } from "@react-three/fiber";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import {
   Mesh,
@@ -18,7 +20,7 @@ type ChangeableModelProps = {
   scale?: number;
   position?: Vector3;
   rotation?: Euler;
-  currentSkin: number;
+  textureUrl?: string | null; // Updated to accept string, undefined, or null
 };
 
 const targetMeshNames = [
@@ -28,56 +30,18 @@ const targetMeshNames = [
   "main-section",
 ];
 
-const textureUrls = [
-  "/assets/pattern_01.png",
-  "/assets/pattern_02.png",
-  "/assets/pattern_03.png",
-  "/assets/pattern_04.png",
-  "/assets/pattern_05.png",
-  "/assets/pattern_06.png",
-];
-
 export function ChangeableModel({
   url,
   scale = 1,
   position = new Vector3(0, 0, 0),
   rotation = new Euler(0, 0, 0),
-  currentSkin,
+  textureUrl,
 }: ChangeableModelProps) {
   const gltf = useLoader(GLTFLoader, url);
   const [targetMeshes, setTargetMeshes] = useState<Mesh[]>([]);
-  const [textures, setTextures] = useState<Texture[]>([]);
-  const { gl } = useThree();
+  const [currentTexture, setCurrentTexture] = useState<Texture | null>(null);
 
-  useEffect(() => {
-    const loader = new TextureLoader();
-    Promise.all(
-      textureUrls.map(
-        (url) =>
-          new Promise<Texture>((resolve, reject) => {
-            loader.load(
-              url,
-              (texture) => {
-                texture.wrapS = texture.wrapT = RepeatWrapping;
-                texture.minFilter = texture.magFilter = NearestFilter;
-                texture.repeat.set(1, 1); // Adjust this value if needed
-                resolve(texture);
-              },
-              undefined,
-              reject
-            );
-          })
-      )
-    )
-      .then((loadedTextures) => {
-        console.log("All textures loaded successfully", loadedTextures);
-        setTextures(loadedTextures);
-      })
-      .catch((error) => {
-        console.error("Error loading textures:", error);
-      });
-  }, []);
-
+  // Find target meshes
   useEffect(() => {
     if (gltf) {
       const meshes: Mesh[] = [];
@@ -91,25 +55,62 @@ export function ChangeableModel({
     }
   }, [gltf]);
 
+  // Load generated texture when textureUrl changes
   useEffect(() => {
-    if (targetMeshes.length > 0 && textures.length > 0) {
-      const texture = textures[currentSkin];
-      if (texture) {
-        targetMeshes.forEach((mesh) => {
+    if (textureUrl) {
+      const loader = new TextureLoader();
+      loader.load(
+        textureUrl,
+        (loadedTexture) => {
+          loadedTexture.wrapS = loadedTexture.wrapT = RepeatWrapping;
+          loadedTexture.minFilter = loadedTexture.magFilter = NearestFilter;
+          loadedTexture.repeat.set(1, 1); // Adjust as needed
+          setCurrentTexture(loadedTexture);
+          console.log("Generated texture loaded successfully");
+        },
+        undefined,
+        (error) => {
+          console.error("Error loading generated texture:", error);
+        }
+      );
+    } else {
+      setCurrentTexture(null);
+    }
+  }, [textureUrl]);
+
+  // Apply current texture or default material to target meshes
+  useEffect(() => {
+    if (targetMeshes.length > 0) {
+      targetMeshes.forEach((mesh) => {
+        if (currentTexture) {
           const material = new MeshStandardMaterial({
-            map: texture,
+            map: currentTexture,
             roughness: 0.5,
             metalness: 0.5,
           });
           mesh.material = material;
+          mesh.material.needsUpdate = true;
           console.log(
-            `Applied texture ${currentSkin} to mesh ${mesh.name}`,
+            `Applied generated texture to mesh ${mesh.name}`,
             material
           );
-        });
-      }
+        } else {
+          // Apply default material if no texture is available
+          const material = new MeshStandardMaterial({
+            color: 0xaaaaaa,
+            roughness: 0.5,
+            metalness: 0.5,
+          });
+          mesh.material = material;
+          mesh.material.needsUpdate = true;
+          console.log(
+            `Applied default material to mesh ${mesh.name}`,
+            material
+          );
+        }
+      });
     }
-  }, [currentSkin, targetMeshes, textures]);
+  }, [currentTexture, targetMeshes]);
 
   return (
     <group scale={scale} position={position} rotation={rotation}>
