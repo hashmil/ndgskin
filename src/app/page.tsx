@@ -299,8 +299,11 @@ export default function Home() {
       ) : (
         // Update this div to use the viewportHeight
         <div
-          className="relative w-screen overflow-hidden bg-black"
-          style={{ height: `${viewportHeight}px` }}>
+          className="relative w-screen bg-black overflow-y-auto"
+          style={{
+            height: `${viewportHeight}px`,
+            minHeight: "-webkit-fill-available",
+          }}>
           <div className="absolute top-0 left-0 w-full p-4 flex justify-between z-10">
             <img
               src="/lionx_logo.png"
