@@ -45,9 +45,7 @@ export const ChangeableModel = React.memo(function ChangeableModel({
   onTextureLoaded,
 }: ChangeableModelProps) {
   const { progress } = useProgress();
-  const gltf = useLoader(GLTFLoader, url, undefined, () => {
-    return new Promise((resolve) => setTimeout(resolve, 2000)); // 2-second delay
-  });
+  const gltf = useLoader(GLTFLoader, url);
   const [targetMeshes, setTargetMeshes] = useState<Mesh[]>([]);
   const [currentTexture, setCurrentTexture] = useState<Texture | null>(null);
   const [currentPosition, setCurrentPosition] = useState(position);

@@ -126,8 +126,11 @@ function LightWithHelper({
 }
 
 function LoadingScreen() {
-  const { progress } = useProgress();
-  console.log("Loading progress:", progress); // Add this line
+  const { progress, active } = useProgress();
+
+  useEffect(() => {
+    console.log("Loading progress:", progress, "Active:", active);
+  }, [progress, active]);
 
   return (
     <Html center>
