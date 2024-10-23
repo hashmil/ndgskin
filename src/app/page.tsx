@@ -5,7 +5,7 @@ import { OrbitControls, Grid, useHelper } from "@react-three/drei";
 import { Model } from "@/components/Model";
 import { Suspense, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { useControls, folder, button } from "leva";
+import { useControls, folder, button, Leva, useCreateStore } from "leva";
 import { Vector3, Euler } from "three";
 import { DirectionalLight, DirectionalLightHelper } from "three";
 import { ChangeableModel } from "@/components/ChangeableModel";
@@ -109,6 +109,7 @@ function LightWithHelper({ position, target, intensity }) {
 export default function Home() {
   const [modelPosition, setModelPosition] = useState(new Vector3(0, 0.1, -0.0));
   const [currentSkin, setCurrentSkin] = useState(0);
+  const store = useCreateStore();
 
   const {
     modelScale,
@@ -133,7 +134,7 @@ export default function Home() {
         modelRotZ: { value: 0.0, min: 0, max: Math.PI * 2, step: 0.1 },
       }),
     },
-    { collapsed: true }
+    { store }
   );
 
   const {
@@ -159,7 +160,7 @@ export default function Home() {
       }),
       lightIntensity: { value: 3.4, min: 0, max: 10, step: 0.1 },
     },
-    { collapsed: true }
+    { store }
   );
 
   useEffect(() => {
@@ -201,6 +202,7 @@ export default function Home() {
         onClick={handleChangeSkin}>
         Change Skin
       </button>
+      <Leva hidden store={store} />
     </div>
   );
 }

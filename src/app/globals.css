@@ -53,8 +53,10 @@ a {
   height: 100%;
 }
 
+/* Hide control panel */
 .leva-container {
-  z-index: 1000;
+  /* z-index: 1000; */
+  display: none !important;
 }
 
 /* Ensure Canvas takes full height */
