@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
         { role: "system", content: "You are a helpful assistant." },
         {
           role: "user",
-          content: `Convert the following description into a short prompt for AI image generation, keep it simple and concise. Prompt should start with "a seamless pattern of ": ${input}`,
+          content: `Convert the following description into a short prompt for AI image generation, keep it simple and concise. Prompt should start with "a seamless illustrated vector pattern of ": ${input}`,
         },
       ],
     });
