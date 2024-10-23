@@ -238,6 +238,12 @@ export default function Home() {
     }
   };
 
+  const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      handleGenerateSkin();
+    }
+  };
+
   return (
     <div
       className="relative w-screen overflow-hidden bg-black"
@@ -276,6 +282,7 @@ export default function Home() {
           type="text"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
+          onKeyDown={handleInputKeyDown}
           placeholder="Describe your pattern"
           className="w-full sm:flex-grow py-3 px-4 bg-gray-200 text-black rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
