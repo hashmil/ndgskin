@@ -4,23 +4,14 @@ FROM node:18-alpine
 # Set the working directory
 WORKDIR /app
 
-# Install TypeScript globally
-RUN npm install -g typescript
-
-# Copy package.json and package-lock.json
-COPY package*.json ./
-
-# Copy ESLint configuration and ignore file
-COPY .eslintrc.json .eslintignore ./
+# Copy package.json, package-lock.json, and configuration files
+COPY package*.json .eslintrc.json .eslintignore tsconfig.json ./
 
 # Install dependencies
 RUN npm ci
 
 # Copy the rest of your app's source code
 COPY . .
-
-# Copy TypeScript configuration
-COPY tsconfig.json ./
 
 # Build your Next.js app
 RUN npm run build
