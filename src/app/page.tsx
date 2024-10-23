@@ -21,6 +21,7 @@ import { useViewportHeight } from "@/hooks/useViewportHeight";
 import PasswordProtection from "@/components/PasswordProtection";
 import AnimatedPlaceholder from "@/components/AnimatedPlaceholder";
 import TexturePanel from "@/components/TexturePanel";
+import { Background } from "@/components/Background";
 
 const ErrorBoundary = dynamic(
   () => import("react-error-boundary").then((mod) => mod.ErrorBoundary),
@@ -318,7 +319,8 @@ export default function Home() {
           <ErrorBoundary FallbackComponent={ErrorFallback}>
             <Canvas
               className="!absolute top-0 left-0 w-full h-full"
-              style={{ background: "#464646" }}>
+              camera={{ position: [0, 0, 5] }}>
+              <Background />
               <CameraController />
               <ambientLight intensity={0.5} />
               <LightWithHelper
