@@ -131,20 +131,28 @@ function LightWithHelper({
 }
 
 export default function Home() {
+  const store = useCreateStore();
   const [modelPosition, setModelPosition] = useState(new Vector3(0, 0, 0));
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedTextureUrl, setGeneratedTextureUrl] = useState<string | null>(
-    null
-  );
   const [isLoadingTexture, setIsLoadingTexture] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const store = useCreateStore();
-  const viewportHeight = useViewportHeight();
   const [showSpinner, setShowSpinner] = useState(false);
   const [textureUrl, setTextureUrl] = useState<string | null>(null);
+  const [generatedPrompt, setGeneratedPrompt] = useState("");
+  // Change this to default to false
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [generatedPrompt, setGeneratedPrompt] = useState<string>("");
+
+  // Add this effect for client-side authentication check
+  useEffect(() => {
+    const authenticated = localStorage.getItem("isAuthenticated") === "true";
+    setIsAuthenticated(authenticated);
+  }, []);
+
+  const handleCorrectPassword = () => {
+    setIsAuthenticated(true);
+    localStorage.setItem("isAuthenticated", "true");
+  };
 
   const {
     modelScale,
@@ -281,9 +289,7 @@ export default function Home() {
   return (
     <>
       {!isAuthenticated ? (
-        <PasswordProtection
-          onCorrectPassword={() => setIsAuthenticated(true)}
-        />
+        <PasswordProtection onCorrectPassword={handleCorrectPassword} />
       ) : (
         <div
           className="relative w-screen overflow-hidden bg-black"
