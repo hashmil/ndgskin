@@ -91,8 +91,7 @@ function CameraController() {
       ref={controlsRef}
       args={[camera as PerspectiveCamera]}
       enableZoom={false}
-      enablePan={true}
-      panSpeed={0.5}
+      enablePan={false}
       enableRotate={true}
       rotateSpeed={0.5}
       minDistance={zoom}
