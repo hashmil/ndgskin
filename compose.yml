@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_ACCESS_PASSWORD=${NEXT_PUBLIC_ACCESS_PASSWORD}
+        - OPENAI_API_KEY=${OPENAI_API_KEY}
+        - FAL_API_KEY=${FAL_API_KEY}
+    container_name: my-3d-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1
+      - FAL_API_KEY=${FAL_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - NEXT_PUBLIC_ACCESS_PASSWORD=${NEXT_PUBLIC_ACCESS_PASSWORD}
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge 
