@@ -105,15 +105,19 @@ interface LightWithHelperProps {
   position: Vector3;
   target: Vector3;
   intensity: number;
+  helperColor?: string;
 }
 
 function LightWithHelper({
   position,
   target,
   intensity,
+  helperColor,
 }: LightWithHelperProps) {
-  const lightRef = useRef<THREE.DirectionalLight>(null);
+  const lightRef = useRef<THREE.DirectionalLight>(null!);
   const targetRef = useRef<THREE.Object3D>(null);
+
+  useHelper(lightRef, THREE.DirectionalLightHelper, 1, helperColor || 'grey');
 
   return (
     <>
@@ -130,7 +134,6 @@ function LightWithHelper({
 }
 
 export default function Home() {
-  const store = useCreateStore();
   const [modelPosition, setModelPosition] = useState(new Vector3(0, 0, 0));
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -138,72 +141,54 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [showSpinner, setShowSpinner] = useState(false);
   const [textureUrl, setTextureUrl] = useState<string | null>(null);
-  const [generatedPrompt, setGeneratedPrompt] = useState("");
-
-  // Change this to default to false
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [generatedPrompt, setGeneratedPrompt] = useState<string | null>(null);
 
-  // Add this effect for client-side authentication check
-  useEffect(() => {
-    const authenticated = localStorage.getItem("isAuthenticated") === "true";
-    setIsAuthenticated(authenticated);
-  }, []);
-
-  const handleCorrectPassword = () => {
-    setIsAuthenticated(true);
-    localStorage.setItem("isAuthenticated", "true");
-  };
-
-  const {
-    modelScale,
-    modelPosX,
-    modelPosY,
-    modelPosZ,
-    modelRotX,
-    modelRotY,
-    modelRotZ,
-  } = useControls(
-    "Model",
-    {
-      modelScale: { value: 0.6, min: 0.1, max: 5, step: 0.1 },
-      position: folder({
-        modelPosX: { value: 0.0, min: -10, max: 10, step: 0.1 },
-        modelPosY: { value: 0.1, min: -10, max: 10, step: 0.1 },
-        modelPosZ: { value: -0.0, min: -10, max: 10, step: 0.1 },
-      }),
-      rotation: folder({
-        modelRotX: { value: 0.0, min: 0, max: Math.PI * 2, step: 0.1 },
-        modelRotY: { value: 0.3, min: 0, max: Math.PI * 2, step: 0.1 },
-        modelRotZ: { value: 0.0, min: 0, max: Math.PI * 2, step: 0.1 },
-      }),
-    },
-    { store }
-  );
-
-  const {
-    lightPosX,
-    lightPosY,
-    lightPosZ,
-    lightTargetX,
-    lightTargetY,
-    lightTargetZ,
-    lightIntensity,
-  } = useControls(
+  const { lightPosX, lightPosY, lightPosZ, lightTargetX, lightTargetY, lightTargetZ, lightIntensity } = useControls(
     "Light",
     {
       position: folder({
-        lightPosX: { value: 1.3, min: -10, max: 10, step: 0.1 },
-        lightPosY: { value: 2.1, min: -10, max: 10, step: 0.1 },
-        lightPosZ: { value: 1.8, min: -10, max: 10, step: 0.1 },
+        lightPosX: { value: 5, min: -20, max: 20, step: 0.1, label: "X" },
+        lightPosY: { value: 5, min: -20, max: 20, step: 0.1, label: "Y" },
+        lightPosZ: { value: 5, min: -20, max: 20, step: 0.1, label: "Z" },
       }),
       target: folder({
-        lightTargetX: { value: 0.0, min: -10, max: 10, step: 0.1 },
-        lightTargetY: { value: -0.1, min: -10, max: 10, step: 0.1 },
-        lightTargetZ: { value: 0.0, min: -10, max: 10, step: 0.1 },
+        lightTargetX: { value: 0, min: -20, max: 20, step: 0.1, label: "X" },
+        lightTargetY: { value: 0, min: -20, max: 20, step: 0.1, label: "Y" },
+        lightTargetZ: { value: 0, min: -20, max: 20, step: 0.1, label: "Z" },
       }),
-      lightIntensity: { value: 3.4, min: 0, max: 10, step: 0.1 },
+      lightIntensity: { value: 1.5, min: 0, max: 10, step: 0.1, label: "Intensity" },
+    }
+  );
+
+  const { skyColor, groundColor, hemisphereIntensity } = useControls(
+    "Sky Light (Hemisphere)",
+    {
+      skyColor: { value: "#87ceeb", label: "Sky Color" },
+      groundColor: { value: "#b08d57", label: "Ground Color" },
+      hemisphereIntensity: { value: 1.5, min: 0, max: 5, step: 0.1, label: "Intensity" },
     },
-    { store }
+    { collapsed: true }
+  );
+
+  const { modelScale, modelPosX, modelPosY, modelPosZ, modelRotX, modelRotY, modelRotZ } = useControls(
+    "Model",
+    {
+      scale: folder({
+        modelScale: { value: 2.5, min: 0.1, max: 10, step: 0.1 },
+      }),
+      position: folder({
+        modelPosX: { value: 0, min: -5, max: 5, step: 0.1 },
+        modelPosY: { value: -1.5, min: -5, max: 5, step: 0.1 },
+        modelPosZ: { value: 0, min: -5, max: 5, step: 0.1 },
+      }),
+      rotation: folder({
+        modelRotX: { value: 0, min: -Math.PI, max: Math.PI, step: 0.01 },
+        modelRotY: { value: 0, min: -Math.PI, max: Math.PI, step: 0.01 },
+        modelRotZ: { value: 0, min: -Math.PI, max: Math.PI, step: 0.01 },
+      }),
+    },
+    { collapsed: true }
   );
 
   useEffect(() => {
@@ -214,7 +199,7 @@ export default function Home() {
     console.log("Starting generation process");
     setIsGenerating(true);
     setShowSpinner(true);
-    setIsLoading(true); // Add this line
+    setIsLoading(true); 
     console.log("Spinner should be visible now");
 
     try {
@@ -231,7 +216,7 @@ export default function Home() {
         "Using seamless pattern prompt for FAL AI:",
         seamlessPatternPrompt
       );
-      setGeneratedPrompt(seamlessPatternPrompt); // Add this line
+      setGeneratedPrompt(seamlessPatternPrompt); 
 
       // Step 2: Send request to FAL AI to generate texture
       const falResponse = await fetch("/api/generateTexture", {
@@ -264,7 +249,7 @@ export default function Home() {
     } catch (error: any) {
       console.error("Error generating skin:", error);
       setShowSpinner(false);
-      setIsLoading(false); // Add this line
+      setIsLoading(false); 
       console.log("Spinner hidden due to error");
     } finally {
       setIsGenerating(false);
@@ -318,7 +303,11 @@ export default function Home() {
           <ErrorBoundary FallbackComponent={ErrorFallback}>
             <Canvas
               className="!absolute top-0 left-0 w-full h-full"
-              camera={{ position: [0, 0, 5] }}>
+              camera={{ position: [0, 0, 5], fov: 40 }}
+              style={{ height: '100vh', width: '100vw' }}
+              onCreated={({ gl, scene }) => {
+                // Optional: Any initial setup on canvas creation
+              }}>
               <Background />
               <CameraController />
               <ambientLight intensity={0.5} />
@@ -326,6 +315,10 @@ export default function Home() {
                 position={new Vector3(lightPosX, lightPosY, lightPosZ)}
                 target={new Vector3(lightTargetX, lightTargetY, lightTargetZ)}
                 intensity={lightIntensity}
+                helperColor="red"
+              />
+              <hemisphereLight 
+                args={[skyColor, groundColor, hemisphereIntensity]}
               />
               <Suspense
                 fallback={
@@ -346,7 +339,7 @@ export default function Home() {
                   </Html>
                 }>
                 <ChangeableModel
-                  url="/NDG_v1.glb"
+                  url="/bottle.glb" // Updated URL
                   scale={modelScale}
                   position={new Vector3(modelPosX, modelPosY, modelPosZ)}
                   mobilePosition={
@@ -385,7 +378,7 @@ export default function Home() {
           )}
 
           <TexturePanel prompt={generatedPrompt} textureUrl={textureUrl} />
-          <Leva hidden />
+          <Leva />
         </div>
       )}
     </>

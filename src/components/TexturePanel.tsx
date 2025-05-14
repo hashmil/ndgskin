@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface TexturePanelProps {
-  prompt?: string;
+  prompt?: string | null; // Allow null in addition to string | undefined
   textureUrl?: string | null;
 }
 

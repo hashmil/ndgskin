@@ -23,15 +23,12 @@ interface ChangeableModelProps {
   mobilePosition: Vector3;
   rotation: Euler;
   textureUrl: string | null;
-  isLoadingTexture: boolean; // Add this line
+  isLoadingTexture: boolean;
   onTextureLoaded: () => void;
 }
 
 const targetMeshNames = [
-  "base-bottom",
-  "base-main",
-  "base-top",
-  "main-section",
+  "bottle", // Updated target mesh name
 ];
 
 export const ChangeableModel = React.memo(function ChangeableModel({
@@ -53,23 +50,67 @@ export const ChangeableModel = React.memo(function ChangeableModel({
   }, [position, mobilePosition]);
 
   useEffect(() => {
-    if (textureUrl && gltf) {
-      const texture = new TextureLoader().load(textureUrl, () => {
+    console.log("ChangeableModel useEffect - textureUrl:", textureUrl);
+    console.log("ChangeableModel useEffect - gltf exists:", !!gltf);
+    if (gltf && textureUrl) {
+      const textureLoader = new TextureLoader();
+      const texture = textureLoader.load(textureUrl, () => {
+        console.log("ChangeableModel: Texture loaded successfully from:", textureUrl);
         texture.wrapS = RepeatWrapping;
         texture.wrapT = RepeatWrapping;
         texture.magFilter = NearestFilter;
+        texture.flipY = false; // Important for GLTF textures
 
         gltf.scene.traverse((child: Object3D) => {
-          if ((child as Mesh).isMesh && targetMeshNames.includes(child.name)) {
+          if ((child as Mesh).isMesh) { // Process all meshes
             const material = (child as Mesh).material as MeshStandardMaterial;
-            material.map = texture;
-            material.needsUpdate = true;
+            
+            // Override base color to white and turn off emissive for testing
+            material.color.setRGB(1, 1, 1); // Set base color to white
+            material.emissive.setRGB(0, 0, 0); // Ensure no emissive color
+            material.emissiveIntensity = 0; // Ensure no emissive intensity
+
+            if (targetMeshNames.includes(child.name)) {
+              console.log("Applying texture to mesh:", child.name);
+              console.log("Material type:", material.type);
+              // console.log("Material object:", material); // Reduce verbosity for now
+              console.log("Set material base color to:", material.color);
+              console.log("Set material emissive color to:", material.emissive);
+              console.log("Set material emissive intensity to:", material.emissiveIntensity);
+              material.map = texture; // RE-ENABLED
+              material.needsUpdate = true;
+            } else {
+              // For non-target meshes, still log that we've reset their color/emissive
+              console.log("Reset color/emissive for mesh:", child.name);
+              console.log("  Material type:", material.type);
+              // console.log("  Material object:", material);
+              material.needsUpdate = true; // Ensure updates if we changed color/emissive
+            }
           }
         });
         onTextureLoaded();
       });
+    } else if (gltf) {
+      // If no textureUrl, traverse and set materials to white for inspection
+      gltf.scene.traverse((child: Object3D) => {
+        if ((child as Mesh).isMesh) {
+          const material = (child as Mesh).material as MeshStandardMaterial;
+          // Override base color to white and turn off emissive for testing
+          material.color.setRGB(1, 1, 1);
+          material.emissive.setRGB(0, 0, 0);
+          material.emissiveIntensity = 0;
+          material.needsUpdate = true;
+
+          console.log("Mesh (no texture, color/emissive reset):", child.name);
+          console.log("  Material type:", material.type);
+          // console.log("  Material object:", material);
+          console.log("  Set material base color to:", material.color);
+          console.log("  Set material emissive color to:", material.emissive);
+          console.log("  Set material emissive intensity to:", material.emissiveIntensity);
+        }
+      });
     }
-  }, [textureUrl, gltf, onTextureLoaded]);
+  }, [gltf, textureUrl, targetMeshNames, onTextureLoaded]);
 
   if (!gltf) {
     return (
