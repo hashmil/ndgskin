@@ -13,8 +13,34 @@ import {
   NearestFilter,
   Texture,
   Object3D,
+  Color,
 } from "three";
 import { Html, useProgress } from "@react-three/drei";
+
+// Helper function to get the average color of an image
+function getAverageRGB(imgEl: HTMLImageElement | HTMLCanvasElement | ImageBitmap): { r: number; g: number; b: number } {
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+  if (!context) return { r: 1, g: 1, b: 1 }; // Default to white if context fails
+
+  const TGT_SIZE = 1; // Draw image as 1x1 pixel to get average color
+  canvas.width = TGT_SIZE;
+  canvas.height = TGT_SIZE;
+
+  try {
+    context.drawImage(imgEl, 0, 0, TGT_SIZE, TGT_SIZE);
+    const data = context.getImageData(0, 0, TGT_SIZE, TGT_SIZE).data;
+    return { r: data[0] / 255, g: data[1] / 255, b: data[2] / 255 };
+  } catch (e) {
+    console.error("Error getting image data for average color:", e);
+    return { r: 1, g: 1, b: 1 }; // Default to white on error (e.g., CORS)
+  }
+}
+
+const CAP_MESH_NAME = "Cap"; // Define the name of the cap mesh
+const targetMeshNames = [
+  "bottle", // Updated target mesh name
+];
 
 interface ChangeableModelProps {
   url: string;
@@ -26,10 +52,6 @@ interface ChangeableModelProps {
   isLoadingTexture: boolean;
   onTextureLoaded: () => void;
 }
-
-const targetMeshNames = [
-  "bottle", // Updated target mesh name
-];
 
 export const ChangeableModel = React.memo(function ChangeableModel({
   url,
@@ -54,61 +76,56 @@ export const ChangeableModel = React.memo(function ChangeableModel({
     console.log("ChangeableModel useEffect - gltf exists:", !!gltf);
     if (gltf && textureUrl) {
       const textureLoader = new TextureLoader();
-      const texture = textureLoader.load(textureUrl, () => {
+      const texture = textureLoader.load(textureUrl, (loadedTexture) => {
         console.log("ChangeableModel: Texture loaded successfully from:", textureUrl);
-        texture.wrapS = RepeatWrapping;
-        texture.wrapT = RepeatWrapping;
-        texture.magFilter = NearestFilter;
-        texture.flipY = false; // Important for GLTF textures
+        loadedTexture.wrapS = RepeatWrapping;
+        loadedTexture.wrapT = RepeatWrapping;
+        loadedTexture.magFilter = NearestFilter;
+        loadedTexture.flipY = false; // Important for GLTF textures
+
+        const averageColor = getAverageRGB(loadedTexture.image);
+        console.log("Average color from texture:", averageColor);
 
         gltf.scene.traverse((child: Object3D) => {
-          if ((child as Mesh).isMesh) { // Process all meshes
+          if ((child as Mesh).isMesh) { 
             const material = (child as Mesh).material as MeshStandardMaterial;
             
-            // Override base color to white and turn off emissive for testing
-            material.color.setRGB(1, 1, 1); // Set base color to white
-            material.emissive.setRGB(0, 0, 0); // Ensure no emissive color
-            material.emissiveIntensity = 0; // Ensure no emissive intensity
+            material.emissive.setRGB(0, 0, 0); 
+            material.emissiveIntensity = 0; 
 
-            if (targetMeshNames.includes(child.name)) {
-              console.log("Applying texture to mesh:", child.name);
-              console.log("Material type:", material.type);
-              // console.log("Material object:", material); // Reduce verbosity for now
-              console.log("Set material base color to:", material.color);
-              console.log("Set material emissive color to:", material.emissive);
-              console.log("Set material emissive intensity to:", material.emissiveIntensity);
-              material.map = texture; // RE-ENABLED
-              material.needsUpdate = true;
+            if (child.name === CAP_MESH_NAME) {
+              material.color.setRGB(averageColor.r, averageColor.g, averageColor.b);
+              material.map = null; // Ensure cap is solid color, no texture
+              console.log(`Set ${CAP_MESH_NAME} (name: ${child.name}) color to avg:`, averageColor);
+            } else if (targetMeshNames.includes(child.name)) {
+              material.color.setRGB(1, 1, 1); // White base for textured part
+              material.map = loadedTexture; 
+              console.log(`Applying texture to ${child.name}, base color white`);
             } else {
-              // For non-target meshes, still log that we've reset their color/emissive
-              console.log("Reset color/emissive for mesh:", child.name);
-              console.log("  Material type:", material.type);
-              // console.log("  Material object:", material);
-              material.needsUpdate = true; // Ensure updates if we changed color/emissive
+              // For other meshes not cap and not target for texture
+              material.color.setRGB(1, 1, 1); // Default to white
+              material.map = null;
+              console.log(`Set other mesh ${child.name} to white, no texture`);
             }
+            material.needsUpdate = true;
           }
         });
         onTextureLoaded();
       });
     } else if (gltf) {
-      // If no textureUrl, traverse and set materials to white for inspection
+      // If no textureUrl, traverse and set default materials
       gltf.scene.traverse((child: Object3D) => {
         if ((child as Mesh).isMesh) {
           const material = (child as Mesh).material as MeshStandardMaterial;
-          // Override base color to white and turn off emissive for testing
-          material.color.setRGB(1, 1, 1);
+          material.color.setRGB(1, 1, 1); // Default all parts to white
           material.emissive.setRGB(0, 0, 0);
           material.emissiveIntensity = 0;
+          material.map = null;
           material.needsUpdate = true;
-
-          console.log("Mesh (no texture, color/emissive reset):", child.name);
-          console.log("  Material type:", material.type);
-          // console.log("  Material object:", material);
-          console.log("  Set material base color to:", material.color);
-          console.log("  Set material emissive color to:", material.emissive);
-          console.log("  Set material emissive intensity to:", material.emissiveIntensity);
         }
       });
+       console.log("No texture URL, setting default white materials.");
+       onTextureLoaded(); // Call if GLTF is loaded but no texture
     }
   }, [gltf, textureUrl, targetMeshNames, onTextureLoaded]);
 

@@ -2,7 +2,7 @@
 
 "use client";
 
-import { Canvas, useThree } from "@react-three/fiber";
+import { Canvas, useThree, useFrame } from "@react-three/fiber";
 import {
   OrbitControls,
   Grid,
@@ -12,7 +12,6 @@ import {
 } from "@react-three/drei";
 import { Suspense, useEffect, useRef, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
-import { useControls, folder, Leva, useCreateStore } from "leva";
 import { Vector3, Euler, PerspectiveCamera } from "three";
 import * as THREE from "three";
 import { ChangeableModel } from "@/components/ChangeableModel";
@@ -22,6 +21,7 @@ import PasswordProtection from "@/components/PasswordProtection";
 import AnimatedPlaceholder from "@/components/AnimatedPlaceholder";
 import TexturePanel from "@/components/TexturePanel";
 import { Background } from "@/components/Background";
+import { useControls, folder, Leva } from "leva"; // Restoring Leva, useControls, folder
 
 const ErrorBoundary = dynamic(
   () => import("react-error-boundary").then((mod) => mod.ErrorBoundary),
@@ -41,22 +41,22 @@ function CameraController() {
   const { camera } = useThree();
   const controlsRef = useRef<OrbitControlsImpl>(null);
 
-  const { posX, posY, posZ, rotX, rotY, rotZ, zoom, fov, height } = useControls(
+  const { posX, posY, posZ, rotX, rotY, rotZ, zoom, height, fov } = useControls(
     "Camera",
     {
       position: folder({
-        posX: { value: -4.8, min: -20, max: 20, step: 0.1 },
-        posY: { value: 3.1, min: -20, max: 20, step: 0.1 },
-        posZ: { value: 13.5, min: -20, max: 20, step: 0.1 },
+        posX: { value: -0.9, min: -20, max: 20, step: 0.1 },
+        posY: { value: 1.6, min: -20, max: 20, step: 0.1 },
+        posZ: { value: 9.9, min: -20, max: 20, step: 0.1 },
       }),
       rotation: folder({
-        rotX: { value: -0.2, min: -Math.PI, max: Math.PI, step: 0.01 },
-        rotY: { value: -0.3, min: -Math.PI, max: Math.PI, step: 0.01 },
-        rotZ: { value: 0.0, min: -Math.PI, max: Math.PI, step: 0.01 },
+        rotX: { value: -0.8, min: -Math.PI, max: Math.PI, step: 0.01 },
+        rotY: { value: 0.66, min: -Math.PI, max: Math.PI, step: 0.01 },
+        rotZ: { value: 0.52, min: -Math.PI, max: Math.PI, step: 0.01 },
       }),
-      zoom: { value: 23.3, min: 0.1, max: 50, step: 0.1 },
-      fov: { value: 11, min: 10, max: 100, step: 1 },
-      height: { value: 1.0, min: -10, max: 20, step: 0.1 },
+      zoom: { value: 39.5, min: 0.1, max: 50, step: 0.1 },
+      height: { value: 12.5, min: -10, max: 20, step: 0.1 },
+      fov: { value: 86, min: 10, max: 120, step: 1 },
     },
     { collapsed: true }
   );
@@ -66,16 +66,16 @@ function CameraController() {
       const isMobile = window.innerWidth < 640;
 
       if (camera instanceof PerspectiveCamera) {
-        camera.fov = isMobile ? fov : fov; // Use same FOV for both
+        camera.fov = fov;
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
       }
 
       const direction = new Vector3(posX, posY, posZ).normalize();
-      const distance = isMobile ? zoom : zoom; // Use same zoom for both
+      const distance = isMobile ? zoom : zoom;
       const newPosition = new Vector3(
         0,
-        isMobile ? height : height, // Use same height for both
+        isMobile ? height : height,
         0
       ).add(direction.multiplyScalar(distance));
 
@@ -84,7 +84,7 @@ function CameraController() {
       controlsRef.current.target.set(0, isMobile ? height : height, 0);
       controlsRef.current.update();
     }
-  }, [camera, posX, posY, posZ, rotX, rotY, rotZ, zoom, fov, height]);
+  }, [camera, posX, posY, posZ, rotX, rotY, rotZ, zoom, height, fov]);
 
   return (
     <OrbitControls
@@ -106,18 +106,62 @@ interface LightWithHelperProps {
   target: Vector3;
   intensity: number;
   helperColor?: string;
+  showHelper?: boolean;
+}
+
+// Internal component to encapsulate the helper logic
+function DirectionalLightHelperComponent({ lightRef, helperColor }: {
+  lightRef: React.MutableRefObject<THREE.DirectionalLight>;
+  helperColor?: string;
+}) {
+  useHelper(lightRef, THREE.DirectionalLightHelper, 1, helperColor || 'grey');
+  return null; // This component only adds the helper, doesn't render visuals itself
 }
 
 function LightWithHelper({
   position,
-  target,
+  target, // This is the desired world position for the target
   intensity,
   helperColor,
+  showHelper = true,
 }: LightWithHelperProps) {
-  const lightRef = useRef<THREE.DirectionalLight>(null!);
-  const targetRef = useRef<THREE.Object3D>(null);
+  const lightRef = useRef<THREE.DirectionalLight>(null!); 
+  const { scene } = useThree(); // Get the scene object
 
-  useHelper(lightRef, THREE.DirectionalLightHelper, 1, helperColor || 'grey');
+  useEffect(() => {
+    if (lightRef.current) {
+      // Create a new Object3D for the target if it doesn't exist or isn't default
+      // By default, a new DirectionalLight creates its own target at (0,0,0)
+      // We want to control its position based on the 'target' prop.
+      const lightInstance = lightRef.current;
+      
+      // Ensure the light's default target is added to the scene
+      // if it's not already and update its position.
+      // Three.js DirectionalLight creates a light.target automatically.
+      if (!lightInstance.target.parent) { // Check if target is not in the scene
+        scene.add(lightInstance.target);
+      }
+      lightInstance.target.position.copy(target);
+      lightInstance.target.updateMatrixWorld(); // Crucial for the light to aim correctly
+    }
+    // Cleanup: remove target from scene if this light component unmounts
+    // and the target was specifically added by it.
+    // However, DirectionalLight's target is often managed by the light itself.
+    // If we add it, we should remove it.
+    return () => {
+      if (lightRef.current && lightRef.current.target.parent === scene) {
+        // scene.remove(lightRef.current.target); // Be cautious with default target removal
+      }
+    };
+  }, [scene, target]); // Re-run if scene or target position changes
+
+  // Update target position dynamically if 'target' prop changes
+  useFrame(() => {
+    if (lightRef.current) {
+      lightRef.current.target.position.copy(target);
+      lightRef.current.target.updateMatrixWorld();
+    }
+  });
 
   return (
     <>
@@ -126,9 +170,18 @@ function LightWithHelper({
         position={position}
         intensity={intensity}
         castShadow
-        target={targetRef.current || undefined}
+        shadow-mapSize-width={2048} 
+        shadow-mapSize-height={2048}
+        shadow-camera-far={50}
+        shadow-camera-left={-10}
+        shadow-camera-right={10}
+        shadow-camera-top={10}
+        shadow-camera-bottom={-10}
+        // The 'target' prop of r3f <directionalLight> tries to find an object by name/ref
+        // or uses the default. We are now managing it manually via useEffect/useFrame.
+        // So, we don't explicitly set target here anymore to avoid conflicts with manual setup.
       />
-      <object3D ref={targetRef} position={target} />
+      {showHelper && <DirectionalLightHelperComponent lightRef={lightRef} helperColor={helperColor} />}
     </>
   );
 }
@@ -144,52 +197,26 @@ export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [generatedPrompt, setGeneratedPrompt] = useState<string | null>(null);
 
-  const { lightPosX, lightPosY, lightPosZ, lightTargetX, lightTargetY, lightTargetZ, lightIntensity } = useControls(
-    "Light",
-    {
-      position: folder({
-        lightPosX: { value: 5, min: -20, max: 20, step: 0.1, label: "X" },
-        lightPosY: { value: 5, min: -20, max: 20, step: 0.1, label: "Y" },
-        lightPosZ: { value: 5, min: -20, max: 20, step: 0.1, label: "Z" },
-      }),
-      target: folder({
-        lightTargetX: { value: 0, min: -20, max: 20, step: 0.1, label: "X" },
-        lightTargetY: { value: 0, min: -20, max: 20, step: 0.1, label: "Y" },
-        lightTargetZ: { value: 0, min: -20, max: 20, step: 0.1, label: "Z" },
-      }),
-      lightIntensity: { value: 1.5, min: 0, max: 10, step: 0.1, label: "Intensity" },
-    }
-  );
+  // Leva controls for Lighting removed - using default/placeholder values
+  const lightIntensity = 1.0;
+  const lightPosX = 5;
+  const lightPosY = 5;
+  const lightPosZ = 5;
+  const lightTargetX = 0;
+  const lightTargetY = 0;
+  const lightTargetZ = 0;
+  const hemisphereIntensity = 0.6;
+  const skyColor = "#adccec";
+  const groundColor = "#606060";
 
-  const { skyColor, groundColor, hemisphereIntensity } = useControls(
-    "Sky Light (Hemisphere)",
-    {
-      skyColor: { value: "#87ceeb", label: "Sky Color" },
-      groundColor: { value: "#b08d57", label: "Ground Color" },
-      hemisphereIntensity: { value: 1.5, min: 0, max: 5, step: 0.1, label: "Intensity" },
-    },
-    { collapsed: true }
-  );
-
-  const { modelScale, modelPosX, modelPosY, modelPosZ, modelRotX, modelRotY, modelRotZ } = useControls(
-    "Model",
-    {
-      scale: folder({
-        modelScale: { value: 2.5, min: 0.1, max: 10, step: 0.1 },
-      }),
-      position: folder({
-        modelPosX: { value: 0, min: -5, max: 5, step: 0.1 },
-        modelPosY: { value: -1.5, min: -5, max: 5, step: 0.1 },
-        modelPosZ: { value: 0, min: -5, max: 5, step: 0.1 },
-      }),
-      rotation: folder({
-        modelRotX: { value: 0, min: -Math.PI, max: Math.PI, step: 0.01 },
-        modelRotY: { value: 0, min: -Math.PI, max: Math.PI, step: 0.01 },
-        modelRotZ: { value: 0, min: -Math.PI, max: Math.PI, step: 0.01 },
-      }),
-    },
-    { collapsed: true }
-  );
+  // Leva controls for Model Transform removed - using default/placeholder values
+  const modelScale = 12;
+  const modelPosX = 0;
+  const modelPosY = -1;
+  const modelPosZ = 0;
+  const modelRotX = 0;
+  const modelRotY = 0;
+  const modelRotZ = 0;
 
   useEffect(() => {
     setModelPosition(new Vector3(modelPosX, modelPosY, modelPosZ));
@@ -303,20 +330,23 @@ export default function Home() {
           <ErrorBoundary FallbackComponent={ErrorFallback}>
             <Canvas
               className="!absolute top-0 left-0 w-full h-full"
-              camera={{ position: [0, 0, 5], fov: 40 }}
+              camera={{ position: [0, 0, 5], fov: 40 }} // Ensured fov: 40 is here
               style={{ height: '100vh', width: '100vw' }}
-              onCreated={({ gl, scene }) => {
-                // Optional: Any initial setup on canvas creation
+              onCreated={({ gl, scene, camera }) => {
+                if ((camera as THREE.PerspectiveCamera).isPerspectiveCamera) {
+                  console.log("Canvas created. Camera FOV:", (camera as THREE.PerspectiveCamera).fov);
+                }
               }}>
               <Background />
               <CameraController />
-              <ambientLight intensity={0.5} />
+              <ambientLight intensity={0.5} /> 
               <LightWithHelper
                 position={new Vector3(lightPosX, lightPosY, lightPosZ)}
                 target={new Vector3(lightTargetX, lightTargetY, lightTargetZ)}
                 intensity={lightIntensity}
                 helperColor="red"
-              />
+                showHelper={false}
+              /> 
               <hemisphereLight 
                 args={[skyColor, groundColor, hemisphereIntensity]}
               />
@@ -378,7 +408,9 @@ export default function Home() {
           )}
 
           <TexturePanel prompt={generatedPrompt} textureUrl={textureUrl} />
-          <Leva />
+          <div className="absolute top-4 left-4 z-10">
+            <Leva hidden={true} /> {/* Restore Leva panel */}
+          </div>
         </div>
       )}
     </>
