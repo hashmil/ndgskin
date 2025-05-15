@@ -1,0 +1,19 @@
+services:
+  skins3d:
+    container_name: skins3d
+    image: git.lionx.me/hash/skins3d
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      FAL_API_KEY: ${FAL_API_KEY}
+      NEXT_PUBLIC_ACCESS_PASSWORD: ${NEXT_PUBLIC_ACCESS_PASSWORD}
+      PORT: 3000
+    restart: unless-stopped
+    networks:
+      - npm
+
+networks:
+  npm:
+    external: true
