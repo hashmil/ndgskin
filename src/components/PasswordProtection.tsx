@@ -39,7 +39,7 @@ export default function PasswordProtection({
       <div className="bg-gray-800 p-8 rounded-lg max-w-md w-full">
         <div className="flex justify-between items-center mb-8">
           <img src="/lionx_logo.png" alt="LionX Logo" className="h-8" />
-          <img src="/ndg_logo.png" alt="NDG Logo" className="h-8" />
+          {/* <img src="/ndg_logo.png" alt="NDG Logo" className="h-8" /> */}
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

@@ -37,7 +37,7 @@ function getAverageRGB(imgEl: HTMLImageElement | HTMLCanvasElement | ImageBitmap
   }
 }
 
-const CAP_MESH_NAME = "Cap"; // Define the name of the cap mesh
+const CAP_MESH_NAME = "Cap"; // Reverted: Define the name of the cap mesh back to 'Cap'
 const targetMeshNames = [
   "bottle", // Updated target mesh name
 ];
@@ -88,6 +88,7 @@ export const ChangeableModel = React.memo(function ChangeableModel({
 
         gltf.scene.traverse((child: Object3D) => {
           if ((child as Mesh).isMesh) { 
+            console.log("Found mesh with name:", child.name); // Log mesh name
             const material = (child as Mesh).material as MeshStandardMaterial;
             
             material.emissive.setRGB(0, 0, 0); 
@@ -116,6 +117,7 @@ export const ChangeableModel = React.memo(function ChangeableModel({
       // If no textureUrl, traverse and set default materials
       gltf.scene.traverse((child: Object3D) => {
         if ((child as Mesh).isMesh) {
+          console.log("Found mesh in GLTF (no texture load):", child.name); // Log mesh name
           const material = (child as Mesh).material as MeshStandardMaterial;
           material.color.setRGB(1, 1, 1); // Default all parts to white
           material.emissive.setRGB(0, 0, 0);

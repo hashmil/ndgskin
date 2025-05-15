@@ -321,11 +321,6 @@ export default function Home() {
               alt="LionX Logo"
               className="h-12 object-contain"
             />
-            <img
-              src="/ndg_logo.png"
-              alt="NDG Logo"
-              className="h-12 object-contain"
-            />
           </div>
           <ErrorBoundary FallbackComponent={ErrorFallback}>
             <Canvas
