@@ -13,10 +13,15 @@ interface LightingSettings {
   lightTargetX: number;
   lightTargetY: number;
   lightTargetZ: number;
+  lightRadius: number;
   hemisphereIntensity: number;
   skyColor: string;
   groundColor: string;
   toneMappingExposure: number;
+  bloomIntensity: number;
+  bloomThreshold: number;
+  bloomSmoothing: number;
+  bloomRadius: number;
 }
 
 interface ModelSettings {
@@ -177,13 +182,92 @@ export default function SimpleControls({
             />
           </div>
 
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Light Radius: {lightingSettings.lightRadius.toFixed(1)}
+            </label>
+            <input
+              type="range"
+              min="0.1"
+              max="20"
+              step="0.1"
+              value={lightingSettings.lightRadius}
+              onChange={(e) => onLightingChange({ ...lightingSettings, lightRadius: parseFloat(e.target.value) })}
+              className="w-full"
+            />
+          </div>
+
+          <div className="border-t border-gray-600 pt-3 mt-3">
+            <h4 className="text-sm font-semibold mb-2">Bloom Effects</h4>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Bloom Intensity: {lightingSettings.bloomIntensity.toFixed(1)}
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="3"
+              step="0.1"
+              value={lightingSettings.bloomIntensity}
+              onChange={(e) => onLightingChange({ ...lightingSettings, bloomIntensity: parseFloat(e.target.value) })}
+              className="w-full"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Bloom Threshold: {lightingSettings.bloomThreshold.toFixed(2)}
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={lightingSettings.bloomThreshold}
+              onChange={(e) => onLightingChange({ ...lightingSettings, bloomThreshold: parseFloat(e.target.value) })}
+              className="w-full"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Bloom Smoothing: {lightingSettings.bloomSmoothing.toFixed(3)}
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="10"
+              step="0.001"
+              value={lightingSettings.bloomSmoothing}
+              onChange={(e) => onLightingChange({ ...lightingSettings, bloomSmoothing: parseFloat(e.target.value) })}
+              className="w-full"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Bloom Radius: {lightingSettings.bloomRadius.toFixed(1)}
+            </label>
+            <input
+              type="range"
+              min="0.1"
+              max="5.0"
+              step="0.1"
+              value={lightingSettings.bloomRadius}
+              onChange={(e) => onLightingChange({ ...lightingSettings, bloomRadius: parseFloat(e.target.value) })}
+              className="w-full"
+            />
+          </div>
+
           <div className="grid grid-cols-3 gap-2">
             <div>
               <label className="block text-xs font-medium mb-1">Light X: {lightingSettings.lightPosX}</label>
               <input
                 type="range"
-                min="-10"
-                max="10"
+                min="-50"
+                max="50"
                 step="0.5"
                 value={lightingSettings.lightPosX}
                 onChange={(e) => onLightingChange({ ...lightingSettings, lightPosX: parseFloat(e.target.value) })}
@@ -194,8 +278,8 @@ export default function SimpleControls({
               <label className="block text-xs font-medium mb-1">Light Y: {lightingSettings.lightPosY}</label>
               <input
                 type="range"
-                min="-10"
-                max="10"
+                min="-50"
+                max="50"
                 step="0.5"
                 value={lightingSettings.lightPosY}
                 onChange={(e) => onLightingChange({ ...lightingSettings, lightPosY: parseFloat(e.target.value) })}
@@ -206,8 +290,8 @@ export default function SimpleControls({
               <label className="block text-xs font-medium mb-1">Light Z: {lightingSettings.lightPosZ}</label>
               <input
                 type="range"
-                min="-10"
-                max="10"
+                min="-50"
+                max="50"
                 step="0.5"
                 value={lightingSettings.lightPosZ}
                 onChange={(e) => onLightingChange({ ...lightingSettings, lightPosZ: parseFloat(e.target.value) })}
@@ -422,7 +506,8 @@ export default function SimpleControls({
         <button
           onClick={() => {
             // Reset to defaults
-            onLightingChange({
+            // Reset to defaults and clear localStorage
+            const defaults = {
               envPreset: "city",
               envBackground: false,
               envRotation: 0,
@@ -433,11 +518,18 @@ export default function SimpleControls({
               lightTargetX: 0,
               lightTargetY: 0,
               lightTargetZ: 0,
-              hemisphereIntensity: 2,
+              lightRadius: 1.0,
+              hemisphereIntensity: 0.3,
               skyColor: "#adccec",
               groundColor: "#606060",
               toneMappingExposure: 1.0,
-            });
+              bloomIntensity: 1.0,
+              bloomThreshold: 0.9,
+              bloomSmoothing: 0.025,
+              bloomRadius: 1.0,
+            };
+            onLightingChange(defaults);
+            localStorage.setItem('lightingSettings', JSON.stringify(defaults));
             onModelChange({
               scale: 1,
               modelPosX: 0,

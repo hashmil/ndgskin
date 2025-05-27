@@ -10,7 +10,7 @@ import {
   Euler,
   TextureLoader,
   RepeatWrapping,
-  NearestFilter,
+  LinearFilter,
   Texture,
   Object3D,
   Color,
@@ -39,17 +39,28 @@ function getAverageRGB(imgEl: HTMLImageElement | HTMLCanvasElement | ImageBitmap
   }
 }
 
-// Helper function to fix geometry normals
+// Helper function to fix geometry normals and smooth edges
 function fixGeometryNormals(gltf: any) {
   gltf.scene.traverse((child: Object3D) => {
     if ((child as Mesh).isMesh) {
       const mesh = child as Mesh;
       const geometry = mesh.geometry as BufferGeometry;
+      const material = mesh.material as MeshPhysicalMaterial;
       
-      // Compute vertex normals for proper lighting
+      // Compute vertex normals for proper lighting and smooth edges
       geometry.computeVertexNormals();
       
-      console.log(`Fixed normals for mesh: ${child.name}`);
+      // Ensure smooth shading for better antialiasing
+      if (material) {
+        material.flatShading = false; // Force smooth shading
+        material.needsUpdate = true;
+      }
+      
+      // Optimize geometry for better rendering
+      geometry.computeBoundingBox();
+      geometry.computeBoundingSphere();
+      
+      console.log(`Fixed normals and smoothing for mesh: ${child.name}`);
     }
   });
 }
@@ -133,7 +144,9 @@ export const ChangeableModel = React.memo(function ChangeableModel({
           console.log("ChangeableModel: Texture loaded successfully from:", textureUrl);
           loadedTexture.wrapS = RepeatWrapping;
           loadedTexture.wrapT = RepeatWrapping;
-          loadedTexture.magFilter = NearestFilter;
+          loadedTexture.magFilter = LinearFilter; // Use linear filtering for smoother textures
+          loadedTexture.minFilter = LinearFilter;
+          loadedTexture.generateMipmaps = true; // Enable mipmaps for better quality
           loadedTexture.flipY = false; // Important for GLTF textures
 
           const averageColor = getAverageRGB(loadedTexture.image);

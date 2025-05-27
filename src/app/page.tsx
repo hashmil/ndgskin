@@ -21,9 +21,15 @@ import TexturePanel from "@/components/TexturePanel";
 import { Background } from "@/components/Background";
 import SimpleControls from "@/components/SimpleControls";
 import { RotatableEnvironment } from "@/components/RotatableEnvironment";
+// import { Effects } from "@/components/Effects";
 
 const ErrorBoundary = dynamic(
   () => import("react-error-boundary").then((mod) => mod.ErrorBoundary),
+  { ssr: false }
+);
+
+const Effects = dynamic(
+  () => import("@/components/Effects").then((mod) => mod.Effects),
   { ssr: false }
 );
 
@@ -185,12 +191,13 @@ export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [generatedPrompt, setGeneratedPrompt] = useState<string | null>(null);
+  const [showControls, setShowControls] = useState(false);
 
   // Ref for OrbitControls
   const controlsRef = useRef<OrbitControlsImpl>(null);
 
-  // Simple settings with state management
-  const [lightingSettings, setLightingSettings] = useState({
+  // Default lighting settings
+  const defaultLightingSettings = {
     envPreset: "city",
     envBackground: false,
     envRotation: 0,
@@ -201,10 +208,30 @@ export default function Home() {
     lightTargetX: 0,
     lightTargetY: 0,
     lightTargetZ: 0,
+    lightRadius: 1.0,
     hemisphereIntensity: 0.3,
     skyColor: "#adccec",
     groundColor: "#606060",
     toneMappingExposure: 1.0,
+    bloomIntensity: 1.0,
+    bloomThreshold: 0.9,
+    bloomSmoothing: 0.025,
+    bloomRadius: 1.0,
+  };
+
+  // Load lighting settings from localStorage or use defaults
+  const [lightingSettings, setLightingSettings] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('lightingSettings');
+      if (saved) {
+        try {
+          return { ...defaultLightingSettings, ...JSON.parse(saved) };
+        } catch (e) {
+          console.error('Error parsing saved lighting settings:', e);
+        }
+      }
+    }
+    return defaultLightingSettings;
   });
 
   const [modelSettings, setModelSettings] = useState({
@@ -227,7 +254,14 @@ export default function Home() {
     fov: 65,
   });
 
-  // Check authentication status on component mount
+  // Save lighting settings to localStorage whenever they change
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('lightingSettings', JSON.stringify(lightingSettings));
+    }
+  }, [lightingSettings]);
+
+  // Check authentication status and config on component mount
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -248,7 +282,21 @@ export default function Home() {
       }
     };
 
+    const checkConfig = async () => {
+      try {
+        const response = await fetch('/api/config');
+        if (response.ok) {
+          const { showControls } = await response.json();
+          setShowControls(showControls);
+        }
+      } catch (error) {
+        console.error('Config check error:', error);
+        setShowControls(false); // Default to false if error
+      }
+    };
+
     checkAuth();
+    checkConfig();
   }, []);
 
   const handleGenerateSkin = async () => {
@@ -367,13 +415,26 @@ export default function Home() {
               style={{ height: '100vh', width: '100vw' }}
               shadows
               gl={(canvas) => {
-                const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+                const renderer = new THREE.WebGLRenderer({ 
+                  canvas, 
+                  antialias: true,
+                  alpha: true,
+                  powerPreference: "high-performance",
+                  stencil: false,
+                  depth: true,
+                  logarithmicDepthBuffer: true
+                });
                 renderer.shadowMap.enabled = true;
                 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
                 // Configure proper color space for realistic rendering
                 renderer.outputColorSpace = THREE.SRGBColorSpace;
                 renderer.toneMapping = THREE.ACESFilmicToneMapping;
                 renderer.toneMappingExposure = lightingSettings.toneMappingExposure;
+                // Enhanced antialiasing settings
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 3));
+                // Force high quality rendering
+                renderer.setClearColor(0x000000, 1);
+                renderer.sortObjects = true;
                 return renderer;
               }}
               onCreated={({ camera }) => {
@@ -439,6 +500,12 @@ export default function Home() {
                   />
                 </group>
               </Suspense>
+              <Effects
+                bloomIntensity={lightingSettings.bloomIntensity}
+                luminanceThreshold={lightingSettings.bloomThreshold}
+                luminanceSmoothing={lightingSettings.bloomSmoothing}
+                bloomRadius={lightingSettings.bloomRadius}
+              />
             </Canvas>
           </ErrorBoundary>
 
@@ -467,14 +534,16 @@ export default function Home() {
 
           <TexturePanel prompt={generatedPrompt} textureUrl={textureUrl} />
 
-          <SimpleControls
-            lightingSettings={lightingSettings}
-            modelSettings={modelSettings}
-            cameraSettings={cameraSettings}
-            onLightingChange={setLightingSettings}
-            onModelChange={setModelSettings}
-            onCameraChange={setCameraSettings}
-          />
+          {showControls && (
+            <SimpleControls
+              lightingSettings={lightingSettings}
+              modelSettings={modelSettings}
+              cameraSettings={cameraSettings}
+              onLightingChange={setLightingSettings}
+              onModelChange={setModelSettings}
+              onCameraChange={setCameraSettings}
+            />
+          )}
         </div>
       )}
     </>
