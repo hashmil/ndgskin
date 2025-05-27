@@ -13,14 +13,33 @@ export default function PasswordProtection({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === process.env.NEXT_PUBLIC_ACCESS_PASSWORD) {
-      setIsLoading(true);
-      // Add a slight delay to show loading state
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      onCorrectPassword();
-    } else {
+    setIsLoading(true);
+    
+    try {
+      // Send password to server for verification
+      const response = await fetch('/api/auth/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ password }),
+      });
+      
+      if (response.ok) {
+        // Password correct - set session and authenticate
+        localStorage.setItem('authenticated', 'true');
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        onCorrectPassword();
+      } else {
+        setError(true);
+        setPassword("");
+        setIsLoading(false);
+      }
+    } catch (error) {
+      console.error('Authentication error:', error);
       setError(true);
       setPassword("");
+      setIsLoading(false);
     }
   };
 

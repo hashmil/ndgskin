@@ -9,6 +9,7 @@ import {
   useHelper,
   Html,
   useProgress,
+  Environment,
 } from "@react-three/drei";
 import { Suspense, useEffect, useRef, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
@@ -17,11 +18,12 @@ import * as THREE from "three";
 import { ChangeableModel } from "@/components/ChangeableModel";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { useViewportHeight } from "@/hooks/useViewportHeight";
+import { useLevaSettings } from "@/hooks/useLevaSettings";
 import PasswordProtection from "@/components/PasswordProtection";
 import AnimatedPlaceholder from "@/components/AnimatedPlaceholder";
 import TexturePanel from "@/components/TexturePanel";
 import { Background } from "@/components/Background";
-import { useControls, folder, Leva } from "leva"; // Restoring Leva, useControls, folder
+import { useControls, folder, Leva, button } from "leva"; // Restoring Leva, useControls, folder
 
 const ErrorBoundary = dynamic(
   () => import("react-error-boundary").then((mod) => mod.ErrorBoundary),
@@ -37,66 +39,136 @@ function ErrorFallback({ error }: { error: Error }) {
   );
 }
 
-function CameraController() {
-  const { camera } = useThree();
-  const controlsRef = useRef<OrbitControlsImpl>(null);
+interface CameraSettings {
+  posX: number;
+  posY: number;
+  posZ: number;
+  targetX: number;
+  targetY: number;
+  targetZ: number;
+  fov: number;
+  enableZoom: boolean;
+  enablePan: boolean;
+  enableRotate: boolean;
+}
 
-  const { posX, posY, posZ, rotX, rotY, rotZ, zoom, height, fov } = useControls(
+function ToneMappingController({ exposure }: { exposure: number }) {
+  const { gl } = useThree();
+  
+  useEffect(() => {
+    gl.toneMappingExposure = exposure;
+  }, [gl, exposure]);
+  
+  return null;
+}
+
+function CameraController({ 
+  initialCameraSettings, 
+  onCameraSettingsChange 
+}: { 
+  initialCameraSettings: CameraSettings; 
+  onCameraSettingsChange: (settings: CameraSettings) => void; 
+}) {
+  const { camera, gl } = useThree();
+  const controlsRef = useRef<OrbitControlsImpl>(null);
+  const [isUpdatingFromLeva, setIsUpdatingFromLeva] = useState(false);
+
+  const [{ posX, posY, posZ, fov, targetX, targetY, targetZ, enableZoom, enablePan, enableRotate }, set] = useControls(
     "Camera",
-    {
+    () => ({
       position: folder({
-        posX: { value: -0.9, min: -20, max: 20, step: 0.1 },
-        posY: { value: 1.6, min: -20, max: 20, step: 0.1 },
-        posZ: { value: 9.9, min: -20, max: 20, step: 0.1 },
+        posX: { value: initialCameraSettings.posX, min: -20, max: 20, step: 0.1 },
+        posY: { value: initialCameraSettings.posY, min: -20, max: 20, step: 0.1 },
+        posZ: { value: initialCameraSettings.posZ, min: -20, max: 20, step: 0.1 },
       }),
-      rotation: folder({
-        rotX: { value: -0.8, min: -Math.PI, max: Math.PI, step: 0.01 },
-        rotY: { value: 0.66, min: -Math.PI, max: Math.PI, step: 0.01 },
-        rotZ: { value: 0.52, min: -Math.PI, max: Math.PI, step: 0.01 },
+      target: folder({
+        targetX: { value: initialCameraSettings.targetX, min: -10, max: 10, step: 0.1 },
+        targetY: { value: initialCameraSettings.targetY, min: -10, max: 10, step: 0.1 },
+        targetZ: { value: initialCameraSettings.targetZ, min: -10, max: 10, step: 0.1 },
       }),
-      zoom: { value: 39.5, min: 0.1, max: 50, step: 0.1 },
-      height: { value: 12.5, min: -10, max: 20, step: 0.1 },
-      fov: { value: 86, min: 10, max: 120, step: 1 },
-    },
-    { collapsed: true }
+      settings: folder({
+        fov: { value: initialCameraSettings.fov, min: 10, max: 120, step: 1 },
+        enableZoom: { value: initialCameraSettings.enableZoom },
+        enablePan: { value: initialCameraSettings.enablePan },
+        enableRotate: { value: initialCameraSettings.enableRotate },
+      }),
+      actions: folder({
+        savePosition: button(() => {
+          const currentSettings = {
+            posX: camera.position.x,
+            posY: camera.position.y, 
+            posZ: camera.position.z,
+            targetX: controlsRef.current?.target.x || 0,
+            targetY: controlsRef.current?.target.y || 0,
+            targetZ: controlsRef.current?.target.z || 0,
+            fov, enableZoom, enablePan, enableRotate
+          };
+          onCameraSettingsChange(currentSettings);
+          console.log('Manually saved camera position:', currentSettings);
+        }),
+      }),
+    }),
+    { collapsed: true },
+    [initialCameraSettings]
   );
 
+  // Update camera when Leva controls change (debounced)
   useEffect(() => {
-    if (camera && controlsRef.current) {
-      const isMobile = window.innerWidth < 640;
-
+    const timeoutId = setTimeout(() => {
       if (camera instanceof PerspectiveCamera) {
         camera.fov = fov;
-        camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
       }
+      
+      setIsUpdatingFromLeva(true);
+      camera.position.set(posX, posY, posZ);
+      
+      if (controlsRef.current) {
+        controlsRef.current.target.set(targetX, targetY, targetZ);
+        controlsRef.current.update();
+      }
+      
+      setTimeout(() => setIsUpdatingFromLeva(false), 50);
+    }, 10); // Small delay to prevent rapid updates
 
-      const direction = new Vector3(posX, posY, posZ).normalize();
-      const distance = isMobile ? zoom : zoom;
-      const newPosition = new Vector3(
-        0,
-        isMobile ? height : height,
-        0
-      ).add(direction.multiplyScalar(distance));
+    return () => clearTimeout(timeoutId);
+  }, [camera, posX, posY, posZ, fov, targetX, targetY, targetZ]);
 
-      camera.position.copy(newPosition);
-      controlsRef.current.object.position.copy(newPosition);
-      controlsRef.current.target.set(0, isMobile ? height : height, 0);
-      controlsRef.current.update();
+  // Sync Leva with camera movement using event-based approach
+  const syncLevaWithCamera = useCallback(() => {
+    if (controlsRef.current && !isUpdatingFromLeva) {
+      const currentPos = camera.position;
+      const currentTarget = controlsRef.current.target;
+      
+      set({
+        posX: Number(currentPos.x.toFixed(2)),
+        posY: Number(currentPos.y.toFixed(2)),
+        posZ: Number(currentPos.z.toFixed(2)),
+        targetX: Number(currentTarget.x.toFixed(2)),
+        targetY: Number(currentTarget.y.toFixed(2)),
+        targetZ: Number(currentTarget.z.toFixed(2)),
+      });
     }
-  }, [camera, posX, posY, posZ, rotX, rotY, rotZ, zoom, height, fov]);
+  }, [camera, set, isUpdatingFromLeva]);
+
+  // Auto-save camera settings when they change
+  useEffect(() => {
+    const cameraSettings: CameraSettings = {
+      posX, posY, posZ, fov, targetX, targetY, targetZ, 
+      enableZoom: Boolean(enableZoom), 
+      enablePan: Boolean(enablePan), 
+      enableRotate: Boolean(enableRotate)
+    };
+    onCameraSettingsChange(cameraSettings);
+  }, [posX, posY, posZ, fov, targetX, targetY, targetZ, enableZoom, enablePan, enableRotate, onCameraSettingsChange]);
 
   return (
     <OrbitControls
       ref={controlsRef}
-      args={[camera as PerspectiveCamera]}
-      enableZoom={false}
-      enablePan={false}
-      enableRotate={true}
-      rotateSpeed={0.5}
-      minDistance={zoom}
-      maxDistance={zoom}
-      target={new Vector3(0, height, 0)}
+      enableZoom={Boolean(enableZoom)}
+      enablePan={Boolean(enablePan)}
+      enableRotate={Boolean(enableRotate)}
+      onChange={syncLevaWithCamera}
     />
   );
 }
@@ -187,40 +259,243 @@ function LightWithHelper({
 }
 
 export default function Home() {
-  const [modelPosition, setModelPosition] = useState(new Vector3(0, 0, 0));
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isLoadingTexture, setIsLoadingTexture] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showSpinner, setShowSpinner] = useState(false);
   const [textureUrl, setTextureUrl] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
   const [generatedPrompt, setGeneratedPrompt] = useState<string | null>(null);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
 
-  // Leva controls for Lighting removed - using default/placeholder values
-  const lightIntensity = 1.0;
-  const lightPosX = 5;
-  const lightPosY = 5;
-  const lightPosZ = 5;
-  const lightTargetX = 0;
-  const lightTargetY = 0;
-  const lightTargetZ = 0;
-  const hemisphereIntensity = 0.6;
-  const skyColor = "#adccec";
-  const groundColor = "#606060";
+  const { loadSettings, saveSettings } = useLevaSettings();
 
-  // Leva controls for Model Transform removed - using default/placeholder values
-  const modelScale = 12;
-  const modelPosX = 0;
-  const modelPosY = -1;
-  const modelPosZ = 0;
-  const modelRotX = 0;
-  const modelRotY = 0;
-  const modelRotZ = 0;
+  // Initialize settings from database
+  const [initialLightingSettings, setInitialLightingSettings] = useState({
+    envPreset: "studio",
+    envBackground: false,
+    lightIntensity: 0.5,
+    lightPosX: 5,
+    lightPosY: 5,
+    lightPosZ: 5,
+    lightTargetX: 0,
+    lightTargetY: 0,
+    lightTargetZ: 0,
+    hemisphereIntensity: 0.3,
+    skyColor: "#adccec",
+    groundColor: "#606060",
+    toneMappingExposure: 1.0,
+  });
 
+  // Leva controls for Lighting
+  const {
+    lightIntensity,
+    lightPosX,
+    lightPosY,
+    lightPosZ,
+    lightTargetX,
+    lightTargetY,
+    lightTargetZ,
+    hemisphereIntensity,
+    skyColor,
+    groundColor,
+    envPreset,
+    envBackground,
+    toneMappingExposure,
+  } = useControls(
+    "Lighting",
+    {
+      environment: folder({
+        envPreset: { 
+          value: initialLightingSettings.envPreset, 
+          options: ["sunset", "dawn", "night", "warehouse", "forest", "apartment", "studio", "city", "park", "lobby"]
+        },
+        envBackground: { value: initialLightingSettings.envBackground },
+      }),
+      directionalLight: folder({
+        lightIntensity: { value: initialLightingSettings.lightIntensity, min: 0, max: 3, step: 0.1 },
+        lightPosX: { value: initialLightingSettings.lightPosX, min: -10, max: 10, step: 0.1 },
+        lightPosY: { value: initialLightingSettings.lightPosY, min: -10, max: 10, step: 0.1 },
+        lightPosZ: { value: initialLightingSettings.lightPosZ, min: -10, max: 10, step: 0.1 },
+        lightTargetX: { value: initialLightingSettings.lightTargetX, min: -5, max: 5, step: 0.1 },
+        lightTargetY: { value: initialLightingSettings.lightTargetY, min: -5, max: 5, step: 0.1 },
+        lightTargetZ: { value: initialLightingSettings.lightTargetZ, min: -5, max: 5, step: 0.1 },
+      }),
+      hemisphereLight: folder({
+        hemisphereIntensity: { value: initialLightingSettings.hemisphereIntensity, min: 0, max: 2, step: 0.1 },
+        skyColor: { value: initialLightingSettings.skyColor },
+        groundColor: { value: initialLightingSettings.groundColor },
+      }),
+      toneMapping: folder({
+        toneMappingExposure: { value: initialLightingSettings.toneMappingExposure, min: 0.1, max: 3.0, step: 0.1 },
+      }),
+    },
+    { collapsed: true },
+    [initialLightingSettings] // Re-run when initial settings change
+  );
+
+  // Initialize model settings from database
+  const [initialModelSettings, setInitialModelSettings] = useState({
+    scale: 1,
+    modelPosX: 0,
+    modelPosY: 0,
+    modelPosZ: 0,
+    modelRotX: 0,
+    modelRotY: 0,
+    modelRotZ: 0,
+  });
+
+  // Initialize camera settings from database - better defaults for phone model
+  const [initialCameraSettings, setInitialCameraSettings] = useState({
+    posX: 2,
+    posY: 1,
+    posZ: 3,
+    targetX: 0,
+    targetY: 0,
+    targetZ: 0,
+    fov: 75,
+    enableZoom: true,
+    enablePan: true,
+    enableRotate: true,
+  });
+
+  // Leva controls for Model Transform
+  const {
+    scale,
+    modelPosX,
+    modelPosY,
+    modelPosZ,
+    modelRotX,
+    modelRotY,
+    modelRotZ,
+  } = useControls(
+    "Model Transform",
+    {
+      scale: { value: initialModelSettings.scale, min: 0.1, max: 10, step: 0.1 },
+      position: folder({
+        modelPosX: { value: initialModelSettings.modelPosX, min: -10, max: 10, step: 0.1 },
+        modelPosY: { value: initialModelSettings.modelPosY, min: -10, max: 10, step: 0.1 },
+        modelPosZ: { value: initialModelSettings.modelPosZ, min: -10, max: 10, step: 0.1 },
+      }),
+      rotation: folder({
+        modelRotX: { value: initialModelSettings.modelRotX, min: -Math.PI, max: Math.PI, step: 0.01 },
+        modelRotY: { value: initialModelSettings.modelRotY, min: -Math.PI, max: Math.PI, step: 0.01 },
+        modelRotZ: { value: initialModelSettings.modelRotZ, min: -Math.PI, max: Math.PI, step: 0.01 },
+      }),
+    },
+    { collapsed: true },
+    [initialModelSettings]
+  );
+
+  // Check authentication status on component mount
   useEffect(() => {
-    setModelPosition(new Vector3(modelPosX, modelPosY, modelPosZ));
-  }, [modelPosX, modelPosY, modelPosZ]);
+    const checkAuth = async () => {
+      try {
+        // Check localStorage first for immediate UX
+        const localAuth = localStorage.getItem('authenticated');
+        if (localAuth === 'true') {
+          // Verify with server to ensure cookie is still valid
+          const response = await fetch('/api/auth/status');
+          if (response.ok) {
+            const { authenticated } = await response.json();
+            setIsAuthenticated(authenticated);
+          }
+        }
+      } catch (error) {
+        console.error('Authentication check error:', error);
+      } finally {
+        setAuthChecked(true);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  // Load settings on component mount (only after auth is checked)
+  useEffect(() => {
+    if (!authChecked) return;
+    
+    const initializeSettings = async () => {
+      try {
+        const settings = await loadSettings();
+        
+        if (settings.lighting) {
+          setInitialLightingSettings(prev => ({ ...prev, ...settings.lighting }));
+        }
+        
+        if (settings.model) {
+          setInitialModelSettings(prev => ({ ...prev, ...settings.model }));
+        }
+        
+        if (settings.camera) {
+          console.log('Loading camera settings from database:', settings.camera);
+          setInitialCameraSettings(prev => ({ ...prev, ...settings.camera }));
+        } else {
+          console.log('No camera settings found in database, using defaults');
+        }
+        
+        setSettingsLoaded(true);
+        console.log('All settings loaded from database:', settings);
+      } catch (error) {
+        console.error('Failed to load settings:', error);
+        setSettingsLoaded(true); // Still set to true to show controls
+      }
+    };
+
+    if (isAuthenticated) {
+      initializeSettings();
+    }
+  }, [loadSettings, authChecked, isAuthenticated]);
+
+  // Auto-save lighting settings when they change
+  useEffect(() => {
+    if (settingsLoaded) {
+      const lightingSettings = {
+        envPreset,
+        envBackground,
+        lightIntensity,
+        lightPosX,
+        lightPosY,
+        lightPosZ,
+        lightTargetX,
+        lightTargetY,
+        lightTargetZ,
+        hemisphereIntensity,
+        skyColor,
+        groundColor,
+        toneMappingExposure,
+      };
+      saveSettings('lighting', lightingSettings);
+    }
+  }, [
+    settingsLoaded, envPreset, envBackground, lightIntensity, lightPosX, lightPosY, 
+    lightPosZ, lightTargetX, lightTargetY, lightTargetZ, hemisphereIntensity, 
+    skyColor, groundColor, toneMappingExposure, saveSettings
+  ]);
+
+  // Auto-save model settings when they change
+  useEffect(() => {
+    if (settingsLoaded) {
+      const modelSettings = {
+        scale,
+        modelPosX,
+        modelPosY,
+        modelPosZ,
+        modelRotX,
+        modelRotY,
+        modelRotZ,
+      };
+      saveSettings('model', modelSettings);
+    }
+  }, [settingsLoaded, scale, modelPosX, modelPosY, modelPosZ, modelRotX, modelRotY, modelRotZ, saveSettings]);
+
+  // Handle camera settings changes
+  const handleCameraSettingsChange = useCallback((cameraSettings: CameraSettings) => {
+    if (settingsLoaded) {
+      saveSettings('camera', cameraSettings);
+    }
+  }, [settingsLoaded, saveSettings]);
 
   const handleGenerateSkin = async () => {
     console.log("Starting generation process");
@@ -301,6 +576,17 @@ export default function Home() {
   // Make sure this line is present
   const viewportHeight = useViewportHeight();
 
+  // Show loading while checking authentication
+  if (!authChecked) {
+    return (
+      <div className="fixed inset-0 bg-black flex items-center justify-center">
+        <div className="loading-spinner-container">
+          <div className="loading-spinner"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       {!isAuthenticated ? (
@@ -325,16 +611,35 @@ export default function Home() {
           <ErrorBoundary FallbackComponent={ErrorFallback}>
             <Canvas
               className="!absolute top-0 left-0 w-full h-full"
-              camera={{ position: [0, 0, 5], fov: 40 }} // Ensured fov: 40 is here
+              camera={{ position: [0, 0, 5], fov: 40 }}
               style={{ height: '100vh', width: '100vw' }}
-              onCreated={({ gl, scene, camera }) => {
+              shadows
+              gl={(canvas) => {
+                const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                // Configure proper color space for realistic rendering
+                renderer.outputColorSpace = THREE.SRGBColorSpace;
+                renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                renderer.toneMappingExposure = 1.0;
+                return renderer;
+              }}
+              onCreated={({ camera }) => {
                 if ((camera as THREE.PerspectiveCamera).isPerspectiveCamera) {
                   console.log("Canvas created. Camera FOV:", (camera as THREE.PerspectiveCamera).fov);
                 }
               }}>
               <Background />
-              <CameraController />
-              <ambientLight intensity={0.5} /> 
+              <ToneMappingController exposure={toneMappingExposure} />
+              <CameraController 
+                initialCameraSettings={initialCameraSettings}
+                onCameraSettingsChange={handleCameraSettingsChange}
+              />
+              <Environment 
+                preset={envPreset as any}
+                background={envBackground}
+              />
+              <ambientLight intensity={0.2} /> 
               <LightWithHelper
                 position={new Vector3(lightPosX, lightPosY, lightPosZ)}
                 target={new Vector3(lightTargetX, lightTargetY, lightTargetZ)}
@@ -365,7 +670,7 @@ export default function Home() {
                 }>
                 <ChangeableModel
                   url="/Samsung S25 Ultra.glb"
-                  scale={modelScale}
+                  scale={scale}
                   position={new Vector3(modelPosX, modelPosY, modelPosZ)}
                   mobilePosition={
                     new Vector3(modelPosX, modelPosY + 0.2, modelPosZ)
@@ -376,6 +681,7 @@ export default function Home() {
                   isLoadingTexture={isLoading}
                 />
               </Suspense>
+              
             </Canvas>
           </ErrorBoundary>
 
@@ -404,7 +710,7 @@ export default function Home() {
 
           <TexturePanel prompt={generatedPrompt} textureUrl={textureUrl} />
           <div className="absolute top-4 left-4 z-10">
-            <Leva hidden={true} /> {/* Restore Leva panel */}
+            <Leva hidden={false} /> {/* Show Leva panel for camera and lighting controls */}
           </div>
         </div>
       )}

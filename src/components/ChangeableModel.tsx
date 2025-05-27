@@ -14,6 +14,7 @@ import {
   Texture,
   Object3D,
   Color,
+  BufferGeometry,
 } from "three";
 import { Html, useProgress } from "@react-three/drei";
 
@@ -35,6 +36,21 @@ function getAverageRGB(imgEl: HTMLImageElement | HTMLCanvasElement | ImageBitmap
     console.error("Error getting image data for average color:", e);
     return { r: 1, g: 1, b: 1 }; // Default to white on error (e.g., CORS)
   }
+}
+
+// Helper function to fix geometry normals
+function fixGeometryNormals(gltf: any) {
+  gltf.scene.traverse((child: Object3D) => {
+    if ((child as Mesh).isMesh) {
+      const mesh = child as Mesh;
+      const geometry = mesh.geometry as BufferGeometry;
+      
+      // Compute vertex normals for proper lighting
+      geometry.computeVertexNormals();
+      
+      console.log(`Fixed normals for mesh: ${child.name}`);
+    }
+  });
 }
 
 // Phone model mesh names - will need to be updated based on actual mesh names in the GLB
@@ -65,6 +81,13 @@ export const ChangeableModel = React.memo(function ChangeableModel({
 }: ChangeableModelProps) {
   const gltf = useLoader(GLTFLoader, url);
   const [currentPosition, setCurrentPosition] = useState(position);
+
+  // Fix geometry normals when GLTF loads
+  useEffect(() => {
+    if (gltf) {
+      fixGeometryNormals(gltf);
+    }
+  }, [gltf]);
 
   useEffect(() => {
     const isMobile = window.innerWidth < 640; // SM breakpoint in Tailwind
