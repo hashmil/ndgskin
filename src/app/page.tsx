@@ -496,7 +496,6 @@ export default function Home() {
                     rotation={new Euler(modelSettings.modelRotX, modelSettings.modelRotY, modelSettings.modelRotZ)}
                     textureUrl={textureUrl}
                     onTextureLoaded={handleTextureLoaded}
-                    isLoadingTexture={isLoading}
                   />
                 </group>
               </Suspense>
