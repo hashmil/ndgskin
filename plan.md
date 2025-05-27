@@ -16,59 +16,59 @@ This document tracks the development progress, architectural decisions, and feat
 
 ### 1. Core 3D Scene & Model Setup
 
-*   Interactive 3D scene initialized using the `<Canvas>` component from `@react-three/fiber` in `src/app/page.tsx`.
-*   The GLTF model (`public/assets/bottle.glb`) serves as the current product for skin application, managed by `ChangeableModel` (`src/components/ChangeableModel.tsx`).
-*   Camera interaction (orbit, pan, zoom) via `<OrbitControls>` in `CameraController` (`src/app/page.tsx`).
+* Interactive 3D scene initialized using the `<Canvas>` component from `@react-three/fiber` in `src/app/page.tsx`.
+* The GLTF model (`public/assets/bottle.glb`) serves as the current product for skin application, managed by `ChangeableModel` (`src/components/ChangeableModel.tsx`).
+* Camera interaction (orbit, pan, zoom) via `<OrbitControls>` in `CameraController` (`src/app/page.tsx`).
 
 ### 2. Dynamic AI Skin Generation and Application (`ChangeableModel` & `src/app/page.tsx`)
 
-*   **Text-to-Texture Pipeline**: Functionality to take a user's text prompt, call an external AI image generation API (handled in `Home` component in `src/app/page.tsx`), and receive an image URL.
-*   **Real-time Skinning**: The received image is loaded via `THREE.TextureLoader` and applied as a `material.map` to the target mesh(es) of the 3D model (e.g., the 'bottle' part).
-*   **Adaptive Cap Coloring**: The 'Cap' mesh's color is dynamically set to the average color of the AI-generated skin. This uses the `getAverageRGB` utility in `ChangeableModel.tsx` to analyze the texture and apply the derived color to the cap's `material.color`.
+* **Text-to-Texture Pipeline**: Functionality to take a user's text prompt, call an external AI image generation API (handled in `Home` component in `src/app/page.tsx`), and receive an image URL.
+* **Real-time Skinning**: The received image is loaded via `THREE.TextureLoader` and applied as a `material.map` to the target mesh(es) of the 3D model (e.g., the 'bottle' part).
+* **Adaptive Cap Coloring**: The 'Cap' mesh's color is dynamically set to the average color of the AI-generated skin. This uses the `getAverageRGB` utility in `ChangeableModel.tsx` to analyze the texture and apply the derived color to the cap's `material.color`.
 
 ### 3. Lighting System
 
-*   Configuration in `src/app/page.tsx`'s `Home` component includes:
-    *   **`HemisphereLight`**: For soft, global ambient illumination.
-    *   **`DirectionalLight`**: (via `LightWithHelper`) Simulates a primary light source, casting shadows.
-    *   **`AmbientLight`**: Ensures all parts of the model are subtly illuminated.
-*   `DirectionalLight` enhancements in `LightWithHelper` include robust target management and an optional visual helper.
+* Configuration in `src/app/page.tsx`'s `Home` component includes:
+  * **`HemisphereLight`**: For soft, global ambient illumination.
+  * **`DirectionalLight`**: (via `LightWithHelper`) Simulates a primary light source, casting shadows.
+  * **`AmbientLight`**: Ensures all parts of the model are subtly illuminated.
+* `DirectionalLight` enhancements in `LightWithHelper` include robust target management and an optional visual helper.
 
 ### 4. Camera Configuration (`CameraController` component in `src/app/page.tsx`)
 
-*   The main `<Canvas>` `camera={{ fov: 40 }}` prop is effectively overridden by Leva for dynamic control.
-*   Leva (`useControls`) is used for fine-tuning camera parameters: position, rotation, zoom, target height, and FOV.
-    *   **FOV Control**: Actively used, allowing dynamic FOV adjustments. Default: `86` degrees.
-    *   **Current Default Camera Settings** (from Leva `useControls`):
-        *   Position (posX, posY, posZ): `(-0.9, 1.6, 9.9)`
-        *   Rotation (rotX, rotY, rotZ): `(-0.8, 0.66, 0.52)` (radians)
-        *   Zoom: `39.5`
-        *   Target Height: `12.5`
+* The main `<Canvas>` `camera={{ fov: 40 }}` prop is effectively overridden by Leva for dynamic control.
+* Leva (`useControls`) is used for fine-tuning camera parameters: position, rotation, zoom, target height, and FOV.
+  * **FOV Control**: Actively used, allowing dynamic FOV adjustments. Default: `86` degrees.
+  * **Current Default Camera Settings** (from Leva `useControls`):
+    * Position (posX, posY, posZ): `(-0.9, 1.6, 9.9)`
+    * Rotation (rotX, rotY, rotZ): `(-0.8, 0.66, 0.52)` (radians)
+    * Zoom: `39.5`
+    * Target Height: `12.5`
 
 ### 5. User Interface (UI) & User Experience (UX) (`src/app/page.tsx`)
 
-*   **Password Protection**: `PasswordProtection` component gates access.
-*   **Prompt Input**: A text input field allows users to enter prompts for skin generation.
-*   **Texture Panel**: `TexturePanel` component displays the user's prompt and the resulting generated texture image.
-*   Leva Control Panel (`leva` library):
-    *   Used for camera controls only; other Leva controls (Lighting, Model Transform) are commented out to simplify the primary user experience.
-    *   Hidden by default (`hidden={true}`) but toggleable for debugging/fine-tuning camera.
+* **Password Protection**: `PasswordProtection` component gates access.
+* **Prompt Input**: A text input field allows users to enter prompts for skin generation.
+* **Texture Panel**: `TexturePanel` component displays the user's prompt and the resulting generated texture image.
+* Leva Control Panel (`leva` library):
+  * Used for camera controls only; other Leva controls (Lighting, Model Transform) are commented out to simplify the primary user experience.
+  * Hidden by default (`hidden={true}`) but toggleable for debugging/fine-tuning camera.
 
 ### 6. Debugging and Refinements
 
-*   Addressed type errors and resolved Three.js specific issues (e.g., `light.target is null`).
-*   Iterated on camera FOV controls, settling on Leva-driven dynamic adjustments.
+* Addressed type errors and resolved Three.js specific issues (e.g., `light.target is null`).
+* Iterated on camera FOV controls, settling on Leva-driven dynamic adjustments.
 
 ## Current Status (As of latest update)
 
-*   The **AI Skins Generator App** successfully allows users to input a text prompt, generate an AI image, and see it applied as a skin to a 3D bottle model in real-time, within a password-protected environment.
-*   The bottle cap color dynamically adapts to the generated skin.
-*   Lighting and camera are configured to provide a clear view of the skinned model, with camera settings adjustable via a hidden Leva panel.
+* The **AI Skins Generator App** successfully allows users to input a text prompt, generate an AI image, and see it applied as a skin to a 3D bottle model in real-time, within a password-protected environment.
+* The bottle cap color dynamically adapts to the generated skin.
+* Lighting and camera are configured to provide a clear view of the skinned model, with camera settings adjustable via a hidden Leva panel.
 
 ## Next Steps / Potential Future Work (General Ideas)
 
-*   Enhanced prompt engineering guides or examples for users.
-*   Support for multiple 3D models or user-uploaded models.
-*   More advanced material property adjustments (e.g., PBR properties like roughness, metalness) for the generated skins.
-*   Saving, sharing, or exporting generated 3D skins/models.
-*   User accounts and gallery of generated skins.
+* Enhanced prompt engineering guides or examples for users.
+* Support for multiple 3D models or user-uploaded models.
+* More advanced material property adjustments (e.g., PBR properties like roughness, metalness) for the generated skins.
+* Saving, sharing, or exporting generated 3D skins/models.
+* User accounts and gallery of generated skins.
