@@ -508,20 +508,52 @@ export default function Home() {
             </Canvas>
           </ErrorBoundary>
 
-          <div className="absolute left-1/2 transform -translate-x-1/2 w-full max-w-3xl px-4 bottom-4 sm:bottom-5">
-            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-              <AnimatedPlaceholder
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                onKeyDown={handleInputKeyDown}
-                className="w-full sm:flex-grow py-3 px-4 bg-gray-200 text-black rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <button
-                onClick={handleGenerateSkin}
-                disabled={isGenerating || isLoading}
-                className="w-full sm:w-auto bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 whitespace-nowrap">
-                {isGenerating ? "Generating..." : "Generate skin"}
-              </button>
+          <div className="absolute left-1/2 transform -translate-x-1/2 w-full max-w-3xl px-2 sm:px-4 bottom-2 sm:bottom-4">
+            <div className="bg-gray-900 p-3 sm:p-4 rounded-lg border border-gray-700">
+              {/* Example prompt buttons */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3 sm:mb-4">
+                <div className="bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 rounded p-[1px] transition-all duration-200">
+                  <button
+                    onClick={() => setPrompt("Minimal geometric pastels pattern")}
+                    className="w-full py-2 px-3 bg-gray-800 hover:bg-gray-700 text-white text-xs sm:text-sm rounded transition-colors duration-200">
+                    Geometric
+                  </button>
+                </div>
+                <div className="bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 rounded p-[1px] transition-all duration-200">
+                  <button
+                    onClick={() => setPrompt("Vibrant abstract leopard print")}
+                    className="w-full py-2 px-3 bg-gray-800 hover:bg-gray-700 text-white text-xs sm:text-sm rounded transition-colors duration-200">
+                    Animal Print
+                  </button>
+                </div>
+                <div className="bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 rounded p-[1px] transition-all duration-200">
+                  <button
+                    onClick={() => setPrompt("Intricate gold Art Deco")}
+                    className="w-full py-2 px-3 bg-gray-800 hover:bg-gray-700 text-white text-xs sm:text-sm rounded transition-colors duration-200">
+                    Art Deco
+                  </button>
+                </div>
+              </div>
+              
+              {/* Input and generate button */}
+              <div className="flex flex-col space-y-3 sm:space-y-0 sm:flex-row sm:space-x-3">
+                <div className="w-full sm:flex-grow bg-gradient-to-r from-cyan-500 to-purple-500 rounded p-[1px]">
+                  <div className="bg-gray-700 rounded h-full w-full">
+                    <AnimatedPlaceholder
+                      value={prompt}
+                      onChange={(e) => setPrompt(e.target.value)}
+                      onKeyDown={handleInputKeyDown}
+                      className="w-full py-2.5 sm:py-3 px-3 sm:px-4 bg-transparent text-white rounded focus:outline-none text-sm"
+                    />
+                  </div>
+                </div>
+                <button
+                  onClick={handleGenerateSkin}
+                  disabled={isGenerating || isLoading}
+                  className="w-full sm:w-auto bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-white font-medium py-2.5 sm:py-3 px-4 sm:px-6 rounded focus:outline-none focus:ring-2 focus:ring-cyan-400 disabled:opacity-50 whitespace-nowrap transition-all duration-200 shadow-sm text-sm">
+                  {isGenerating ? "Generating..." : "Generate skin"}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -531,7 +563,9 @@ export default function Home() {
             </div>
           )}
 
-          <TexturePanel prompt={generatedPrompt} textureUrl={textureUrl} />
+          {showControls && (
+            <TexturePanel prompt={generatedPrompt} textureUrl={textureUrl} />
+          )}
 
           {showControls && (
             <SimpleControls

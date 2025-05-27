@@ -21,10 +21,10 @@ export default function TexturePanel({
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 20 }}
-            className="bg-white/95 backdrop-blur-sm shadow-lg rounded-l-lg w-80 p-6">
+            className="bg-gray-900/95 backdrop-blur-sm shadow-lg rounded-l-lg w-80 p-6 border-l border-gray-700">
             <button
               onClick={() => setIsExpanded(false)}
-              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-200">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="24"
@@ -42,21 +42,21 @@ export default function TexturePanel({
 
             <div className="space-y-6">
               <div>
-                <h3 className="text-sm font-medium text-gray-900 mb-2">
+                <h3 className="text-sm font-medium text-white mb-2">
                   Adapted Prompt
                 </h3>
-                <div className="p-3 bg-gray-200 rounded-lg">
-                  <p className="text-sm text-gray-700">
+                <div className="p-3 bg-gray-800 rounded-lg border border-gray-600">
+                  <p className="text-sm text-gray-300">
                     {prompt || "No prompt yet"}
                   </p>
                 </div>
               </div>
 
               <div>
-                <h3 className="text-sm font-medium text-gray-900 mb-2">
+                <h3 className="text-sm font-medium text-white mb-2">
                   Generated texture
                 </h3>
-                <div className="bg-gray-100 rounded-lg overflow-hidden">
+                <div className="bg-gray-800 rounded-lg overflow-hidden border border-gray-600">
                   {textureUrl ? (
                     <img
                       src={textureUrl}
@@ -64,7 +64,7 @@ export default function TexturePanel({
                       className="w-full h-64 object-cover"
                     />
                   ) : (
-                    <div className="w-full h-64 flex items-center justify-center text-gray-400">
+                    <div className="w-full h-64 flex items-center justify-center text-gray-500">
                       No texture generated
                     </div>
                   )}
@@ -78,7 +78,7 @@ export default function TexturePanel({
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             onClick={() => setIsExpanded(true)}
-            className="bg-white/95 backdrop-blur-sm shadow-lg px-3 py-6 rounded-l-lg text-gray-600 hover:text-gray-900">
+            className="bg-gray-900/95 backdrop-blur-sm shadow-lg px-3 py-6 rounded-l-lg text-gray-400 hover:text-gray-200 border-l border-gray-700">
             <svg
               width="24"
               height="24"
