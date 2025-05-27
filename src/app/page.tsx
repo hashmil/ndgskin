@@ -6,21 +6,21 @@ import { Canvas, useThree, useFrame } from "@react-three/fiber";
 import {
   OrbitControls,
   useHelper,
-  Html,
 } from "@react-three/drei";
 import { Suspense, useEffect, useRef, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { Vector3, Euler, PerspectiveCamera } from "three";
 import * as THREE from "three";
-import { ChangeableModel } from "@/components/ChangeableModel";
+import { AnimatedModelWrapper } from "@/components/AnimatedModelWrapper";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { useViewportHeight } from "@/hooks/useViewportHeight";
 import PasswordProtection from "@/components/PasswordProtection";
 import AnimatedPlaceholder from "@/components/AnimatedPlaceholder";
 import TexturePanel from "@/components/TexturePanel";
-import { Background } from "@/components/Background";
+import { Background, ParallaxTracker } from "@/components/Background";
 import SimpleControls from "@/components/SimpleControls";
 import { RotatableEnvironment } from "@/components/RotatableEnvironment";
+import LoadingBar from "@/components/LoadingBar";
 // import { Effects } from "@/components/Effects";
 
 const ErrorBoundary = dynamic(
@@ -185,13 +185,14 @@ function LightWithHelper({
 export default function Home() {
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [showSpinner, setShowSpinner] = useState(false);
   const [textureUrl, setTextureUrl] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [generatedPrompt, setGeneratedPrompt] = useState<string | null>(null);
   const [showControls, setShowControls] = useState(false);
+  const [modelLoaded, setModelLoaded] = useState(false);
+  const [showUI, setShowUI] = useState(false);
+  const [isLoadingComplete, setIsLoadingComplete] = useState(false);
 
   // Ref for OrbitControls
   const controlsRef = useRef<OrbitControlsImpl>(null);
@@ -302,9 +303,6 @@ export default function Home() {
   const handleGenerateSkin = async () => {
     console.log("Starting generation process");
     setIsGenerating(true);
-    setShowSpinner(true);
-    setIsLoading(true);
-    console.log("Spinner should be visible now");
 
     try {
       // Step 1: Use OpenAI to convert user input to a seamless pattern prompt
@@ -352,9 +350,6 @@ export default function Home() {
       console.log("Texture URL set, waiting for texture to load");
     } catch (error: any) {
       console.error("Error generating skin:", error);
-      setShowSpinner(false);
-      setIsLoading(false);
-      console.log("Spinner hidden due to error");
     } finally {
       setIsGenerating(false);
     }
@@ -368,10 +363,22 @@ export default function Home() {
 
   const handleTextureLoaded = useCallback(() => {
     console.log("Texture loaded and applied");
-    setIsLoading(false);
-    setShowSpinner(false);
-    console.log("Spinner should be hidden now");
   }, []);
+
+  // Sequencing animations
+  useEffect(() => {
+    if (modelLoaded) {
+      // Start model animation immediately
+      // Wait 800ms before hiding loading bar (faster)
+      setTimeout(() => {
+        setIsLoadingComplete(true);
+        // Wait another 300ms before showing UI (faster)
+        setTimeout(() => {
+          setShowUI(true);
+        }, 300);
+      }, 800);
+    }
+  }, [modelLoaded]);
 
   // Make sure this line is present
   const viewportHeight = useViewportHeight();
@@ -396,11 +403,12 @@ export default function Home() {
       ) : (
         // Update this div to use the viewportHeight
         <div
-          className="relative w-screen bg-black overflow-y-auto"
+          className="relative w-screen overflow-y-auto"
           style={{
             height: `${viewportHeight}px`,
             minHeight: "-webkit-fill-available",
           }}>
+          {!lightingSettings.envBackground && <Background />}
           <div className="absolute top-0 left-0 w-full p-4 flex justify-between z-10">
             <img
               src="/lionx_logo.png"
@@ -432,8 +440,8 @@ export default function Home() {
                 renderer.toneMappingExposure = lightingSettings.toneMappingExposure;
                 // Enhanced antialiasing settings
                 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 3));
-                // Force high quality rendering
-                renderer.setClearColor(0x000000, 1);
+                // Make canvas transparent to show background
+                renderer.setClearColor(0x000000, 0);
                 renderer.sortObjects = true;
                 return renderer;
               }}
@@ -442,7 +450,7 @@ export default function Home() {
                   console.log("Canvas created. Camera FOV:", (camera as THREE.PerspectiveCamera).fov);
                 }
               }}>
-              {!lightingSettings.envBackground && <Background />}
+              {!lightingSettings.envBackground && <ParallaxTracker />}
               <ToneMappingController exposure={lightingSettings.toneMappingExposure} />
               <CameraController settings={cameraSettings} controlsRef={controlsRef} />
               <OrbitControls
@@ -467,35 +475,20 @@ export default function Home() {
               <hemisphereLight
                 args={[lightingSettings.skyColor, lightingSettings.groundColor, lightingSettings.hemisphereIntensity]}
               />
-              <Suspense
-                fallback={
-                  <Html center>
-                    <div
-                      style={{
-                        position: "fixed",
-                        top: "50%",
-                        left: "50%",
-                        transform: "translate(-50%, -50%)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        height: "100vh", // Ensure it takes full viewport height
-                      }}>
-                      <div className="loading-spinner"></div>
-                    </div>
-                  </Html>
-                }>
+              <Suspense fallback={null}>
                 <group scale={[-1, 1, 1]}>
-                  <ChangeableModel
+                  <AnimatedModelWrapper
+                    isLoaded={modelLoaded}
                     url="/Samsung S25 Ultra.glb"
                     scale={modelSettings.scale}
-                    position={new Vector3(modelSettings.modelPosX, modelSettings.modelPosY, modelSettings.modelPosZ)}
+                    targetPosition={new Vector3(modelSettings.modelPosX, modelSettings.modelPosY, modelSettings.modelPosZ)}
                     mobilePosition={
                       new Vector3(modelSettings.modelPosX, modelSettings.modelPosY + 0.2, modelSettings.modelPosZ)
                     }
-                    rotation={new Euler(modelSettings.modelRotX, modelSettings.modelRotY, modelSettings.modelRotZ)}
+                    targetRotation={new Euler(modelSettings.modelRotX, modelSettings.modelRotY, modelSettings.modelRotZ)}
                     textureUrl={textureUrl}
                     onTextureLoaded={handleTextureLoaded}
+                    onModelLoaded={() => setModelLoaded(true)}
                   />
                 </group>
               </Suspense>
@@ -508,7 +501,10 @@ export default function Home() {
             </Canvas>
           </ErrorBoundary>
 
-          <div className="absolute left-1/2 transform -translate-x-1/2 w-full max-w-3xl px-2 sm:px-4 bottom-2 sm:bottom-4">
+          <div 
+            className={`absolute left-1/2 transform -translate-x-1/2 w-full max-w-3xl px-2 sm:px-4 bottom-2 sm:bottom-4 transition-all duration-1000 ease-out ${
+              showUI ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'
+            }`}>
             <div className="bg-gray-900 p-3 sm:p-4 rounded-lg border border-gray-700">
               {/* Example prompt buttons */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3 sm:mb-4">
@@ -549,7 +545,7 @@ export default function Home() {
                 </div>
                 <button
                   onClick={handleGenerateSkin}
-                  disabled={isGenerating || isLoading}
+                  disabled={isGenerating}
                   className="w-full sm:w-auto bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-white font-medium py-2.5 sm:py-3 px-4 sm:px-6 rounded focus:outline-none focus:ring-2 focus:ring-cyan-400 disabled:opacity-50 whitespace-nowrap transition-all duration-200 shadow-sm text-sm">
                   {isGenerating ? "Generating..." : "Generate skin"}
                 </button>
@@ -557,11 +553,11 @@ export default function Home() {
             </div>
           </div>
 
-          {showSpinner && (
-            <div className="loading-spinner-container">
-              <div className="loading-spinner"></div>
-            </div>
-          )}
+          <LoadingBar 
+            isLoading={!isLoadingComplete || isGenerating} 
+            message={isGenerating ? "Generating your skin" : "Loading AI Skins Generator"}
+            progress={isGenerating ? undefined : (modelLoaded ? 100 : 0)}
+          />
 
           {showControls && (
             <TexturePanel prompt={generatedPrompt} textureUrl={textureUrl} />

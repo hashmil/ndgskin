@@ -115,6 +115,8 @@ interface ChangeableModelProps {
   rotation: Euler;
   textureUrl: string | null;
   onTextureLoaded: () => void;
+  onModelLoaded?: () => void;
+  visible?: boolean;
 }
 
 export const ChangeableModel = React.memo(function ChangeableModel({
@@ -125,6 +127,8 @@ export const ChangeableModel = React.memo(function ChangeableModel({
   rotation = new Euler(0, 0, 0),
   textureUrl,
   onTextureLoaded,
+  onModelLoaded,
+  visible = true,
 }: ChangeableModelProps) {
   const gltf = useLoader(GLTFLoader, url);
   const [currentPosition, setCurrentPosition] = useState(position);
@@ -133,8 +137,12 @@ export const ChangeableModel = React.memo(function ChangeableModel({
   useEffect(() => {
     if (gltf) {
       fixGeometryNormals(gltf);
+      // Call onModelLoaded when model is ready
+      if (onModelLoaded) {
+        onModelLoaded();
+      }
     }
-  }, [gltf]);
+  }, [gltf, onModelLoaded]);
 
   useEffect(() => {
     const isMobile = window.innerWidth < 640; // SM breakpoint in Tailwind
@@ -494,7 +502,7 @@ export const ChangeableModel = React.memo(function ChangeableModel({
   }
 
   return (
-    <group scale={scale} position={currentPosition} rotation={rotation}>
+    <group scale={scale} position={currentPosition} rotation={rotation} visible={visible}>
       <primitive object={gltf.scene} />
     </group>
   );

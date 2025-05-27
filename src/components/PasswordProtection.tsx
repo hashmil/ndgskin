@@ -55,41 +55,40 @@ export default function PasswordProtection({
 
   return (
     <div className="fixed inset-0 bg-black flex items-center justify-center p-4">
-      <div className="bg-gray-800 p-8 rounded-lg max-w-md w-full">
-        <div className="flex justify-between items-center mb-8">
-          <img src="/lionx_logo.png" alt="LionX Logo" className="h-8" />
-          {/* <img src="/ndg_logo.png" alt="NDG Logo" className="h-8" /> */}
+      <div className="bg-gray-900 p-6 sm:p-8 rounded-lg border border-gray-700 max-w-md w-full">
+        <div className="flex justify-center items-center mb-8">
+          <img src="/lionx_logo.png" alt="LionX Logo" className="h-16 sm:h-20" />
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label htmlFor="password" className="sr-only">
               Password
             </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setError(false);
-              }}
-              placeholder="Enter password"
-              className={`w-full px-4 py-2 rounded bg-gray-700 text-white border ${
-                error ? "border-red-500" : "border-gray-600"
-              } focus:outline-none ${
-                error ? "focus:border-red-500" : "focus:border-blue-500"
-              }`}
-            />
+            <div className="bg-gradient-to-r from-cyan-500 to-purple-500 rounded p-[1px]">
+              <input
+                id="password"
+                name="password"
+                type="password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setError(false);
+                }}
+                placeholder="Enter password"
+                className={`w-full py-3 px-4 bg-gray-700 text-white rounded focus:outline-none ${
+                  error ? "ring-2 ring-red-500" : ""
+                }`}
+              />
+            </div>
           </div>
           {error && (
-            <p className="text-red-500 text-sm">
+            <p className="text-red-500 text-sm text-center">
               Incorrect password. Please try again.
             </p>
           )}
           <button
             type="submit"
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+            className="w-full bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-white font-medium py-3 px-6 rounded focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all duration-200 shadow-sm">
             Enter
           </button>
         </form>
