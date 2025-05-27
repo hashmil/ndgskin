@@ -364,7 +364,7 @@ export default function Home() {
                   </Html>
                 }>
                 <ChangeableModel
-                  url="/bottle.glb" // Updated URL
+                  url="/Samsung S25 Ultra.glb"
                   scale={modelScale}
                   position={new Vector3(modelPosX, modelPosY, modelPosZ)}
                   mobilePosition={

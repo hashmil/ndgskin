@@ -5,7 +5,7 @@ import { useLoader } from "@react-three/fiber";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import {
   Mesh,
-  MeshStandardMaterial,
+  MeshPhysicalMaterial,
   Vector3,
   Euler,
   TextureLoader,
@@ -37,9 +37,9 @@ function getAverageRGB(imgEl: HTMLImageElement | HTMLCanvasElement | ImageBitmap
   }
 }
 
-const CAP_MESH_NAME = "Cap"; // Reverted: Define the name of the cap mesh back to 'Cap'
+// Phone model mesh names - will need to be updated based on actual mesh names in the GLB
 const targetMeshNames = [
-  "bottle", // Updated target mesh name
+  "phone", // Main phone body - will be updated after inspecting the model
 ];
 
 interface ChangeableModelProps {
@@ -89,24 +89,18 @@ export const ChangeableModel = React.memo(function ChangeableModel({
         gltf.scene.traverse((child: Object3D) => {
           if ((child as Mesh).isMesh) { 
             console.log("Found mesh with name:", child.name); // Log mesh name
-            const material = (child as Mesh).material as MeshStandardMaterial;
+            const material = (child as Mesh).material as MeshPhysicalMaterial;
             
             material.emissive.setRGB(0, 0, 0); 
             material.emissiveIntensity = 0; 
 
-            if (child.name === CAP_MESH_NAME) {
-              material.color.setRGB(averageColor.r, averageColor.g, averageColor.b);
-              material.map = null; // Ensure cap is solid color, no texture
-              console.log(`Set ${CAP_MESH_NAME} (name: ${child.name}) color to avg:`, averageColor);
-            } else if (targetMeshNames.includes(child.name)) {
+            if (targetMeshNames.includes(child.name)) {
               material.color.setRGB(1, 1, 1); // White base for textured part
               material.map = loadedTexture; 
               console.log(`Applying texture to ${child.name}, base color white`);
             } else {
-              // For other meshes not cap and not target for texture
-              material.color.setRGB(1, 1, 1); // Default to white
-              material.map = null;
-              console.log(`Set other mesh ${child.name} to white, no texture`);
+              // For other meshes, keep original material properties
+              console.log(`Keeping original material for mesh: ${child.name}`);
             }
             material.needsUpdate = true;
           }
@@ -114,15 +108,12 @@ export const ChangeableModel = React.memo(function ChangeableModel({
         onTextureLoaded();
       });
     } else if (gltf) {
-      // If no textureUrl, traverse and set default materials
+      // If no textureUrl, traverse and log mesh names without changing materials
       gltf.scene.traverse((child: Object3D) => {
         if ((child as Mesh).isMesh) {
           console.log("Found mesh in GLTF (no texture load):", child.name); // Log mesh name
-          const material = (child as Mesh).material as MeshStandardMaterial;
-          material.color.setRGB(1, 1, 1); // Default all parts to white
-          material.emissive.setRGB(0, 0, 0);
-          material.emissiveIntensity = 0;
-          material.map = null;
+          const material = (child as Mesh).material as MeshPhysicalMaterial;
+          // Keep original material properties from the GLB file
           material.needsUpdate = true;
         }
       });
