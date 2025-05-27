@@ -15,6 +15,7 @@ import {
   Object3D,
   Color,
   BufferGeometry,
+  MeshBasicMaterial,
 } from "three";
 import { Html, useProgress } from "@react-three/drei";
 
@@ -97,51 +98,83 @@ export const ChangeableModel = React.memo(function ChangeableModel({
   useEffect(() => {
     console.log("ChangeableModel useEffect - textureUrl:", textureUrl);
     console.log("ChangeableModel useEffect - gltf exists:", !!gltf);
-    if (gltf && textureUrl) {
+    
+    if (gltf) {
       const textureLoader = new TextureLoader();
-      const texture = textureLoader.load(textureUrl, (loadedTexture) => {
-        console.log("ChangeableModel: Texture loaded successfully from:", textureUrl);
-        loadedTexture.wrapS = RepeatWrapping;
-        loadedTexture.wrapT = RepeatWrapping;
-        loadedTexture.magFilter = NearestFilter;
-        loadedTexture.flipY = false; // Important for GLTF textures
-
-        const averageColor = getAverageRGB(loadedTexture.image);
-        console.log("Average color from texture:", averageColor);
-
+      
+      // Load the alpha texture for Plane008 logo cutout
+      const logoAlphaTexture = textureLoader.load("/textures/logomatte.jpg", (loadedAlphaTexture) => {
+        console.log("Logo alpha texture loaded successfully");
+        loadedAlphaTexture.flipY = false;
+        
+        // Apply alpha texture to Plane008 mesh
         gltf.scene.traverse((child: Object3D) => {
-          if ((child as Mesh).isMesh) { 
-            console.log("Found mesh with name:", child.name); // Log mesh name
-            const material = (child as Mesh).material as MeshPhysicalMaterial;
+          if ((child as Mesh).isMesh && child.name === "Plane008") {
+            console.log("Found Plane008 mesh, applying logo alpha texture");
             
-            material.emissive.setRGB(0, 0, 0); 
-            material.emissiveIntensity = 0; 
-
-            if (targetMeshNames.includes(child.name)) {
-              material.color.setRGB(1, 1, 1); // White base for textured part
-              material.map = loadedTexture; 
-              console.log(`Applying texture to ${child.name}, base color white`);
-            } else {
-              // For other meshes, keep original material properties
-              console.log(`Keeping original material for mesh: ${child.name}`);
-            }
-            material.needsUpdate = true;
+            // Create a new material with alpha map for cutout effect
+            const logoMaterial = new MeshPhysicalMaterial({
+              color: 0xffffff,
+              alphaMap: loadedAlphaTexture,
+              transparent: true,
+              alphaTest: 0.5, // This creates the cutout effect
+              metalness: 0.5,
+              roughness: 0.1,
+            });
+            
+            (child as Mesh).material = logoMaterial;
+            console.log("Applied logo alpha texture to Plane008");
           }
         });
-        onTextureLoaded();
       });
-    } else if (gltf) {
-      // If no textureUrl, traverse and log mesh names without changing materials
-      gltf.scene.traverse((child: Object3D) => {
-        if ((child as Mesh).isMesh) {
-          console.log("Found mesh in GLTF (no texture load):", child.name); // Log mesh name
-          const material = (child as Mesh).material as MeshPhysicalMaterial;
-          // Keep original material properties from the GLB file
-          material.needsUpdate = true;
-        }
-      });
-       console.log("No texture URL, setting default white materials.");
-       onTextureLoaded(); // Call if GLTF is loaded but no texture
+      
+      if (textureUrl) {
+        const texture = textureLoader.load(textureUrl, (loadedTexture) => {
+          console.log("ChangeableModel: Texture loaded successfully from:", textureUrl);
+          loadedTexture.wrapS = RepeatWrapping;
+          loadedTexture.wrapT = RepeatWrapping;
+          loadedTexture.magFilter = NearestFilter;
+          loadedTexture.flipY = false; // Important for GLTF textures
+
+          const averageColor = getAverageRGB(loadedTexture.image);
+          console.log("Average color from texture:", averageColor);
+
+          gltf.scene.traverse((child: Object3D) => {
+            if ((child as Mesh).isMesh) { 
+              console.log("Found mesh with name:", child.name); // Log mesh name
+              const material = (child as Mesh).material as MeshPhysicalMaterial;
+              
+              material.emissive.setRGB(0, 0, 0); 
+              material.emissiveIntensity = 0; 
+
+              if (targetMeshNames.includes(child.name)) {
+                material.color.setRGB(1, 1, 1); // White base for textured part
+                material.map = loadedTexture; 
+                console.log(`Applying texture to ${child.name}, base color white`);
+              } else if (child.name !== "Plane008") {
+                // For other meshes (except Plane008), keep original material properties
+                console.log(`Keeping original material for mesh: ${child.name}`);
+              }
+              material.needsUpdate = true;
+            }
+          });
+          onTextureLoaded();
+        });
+      } else {
+        // If no textureUrl, traverse and log mesh names without changing materials
+        gltf.scene.traverse((child: Object3D) => {
+          if ((child as Mesh).isMesh) {
+            console.log("Found mesh in GLTF (no texture load):", child.name); // Log mesh name
+            if (child.name !== "Plane008") {
+              const material = (child as Mesh).material as MeshPhysicalMaterial;
+              // Keep original material properties from the GLB file
+              material.needsUpdate = true;
+            }
+          }
+        });
+        console.log("No texture URL, setting default white materials.");
+        onTextureLoaded(); // Call if GLTF is loaded but no texture
+      }
     }
   }, [gltf, textureUrl, targetMeshNames, onTextureLoaded]);
 

@@ -154,7 +154,7 @@ export default function SimpleControls({
             <input
               type="range"
               min="0"
-              max="3"
+              max="10"
               step="0.1"
               value={lightingSettings.lightIntensity}
               onChange={(e) => onLightingChange({ ...lightingSettings, lightIntensity: parseFloat(e.target.value) })}
@@ -426,14 +426,14 @@ export default function SimpleControls({
               envPreset: "city",
               envBackground: false,
               envRotation: 0,
-              lightIntensity: 0.5,
+              lightIntensity: 3,
               lightPosX: 5,
               lightPosY: 5,
               lightPosZ: 5,
               lightTargetX: 0,
               lightTargetY: 0,
               lightTargetZ: 0,
-              hemisphereIntensity: 0.3,
+              hemisphereIntensity: 2,
               skyColor: "#adccec",
               groundColor: "#606060",
               toneMappingExposure: 1.0,

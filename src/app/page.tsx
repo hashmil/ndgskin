@@ -194,7 +194,7 @@ export default function Home() {
     envPreset: "city",
     envBackground: false,
     envRotation: 0,
-    lightIntensity: 0.5,
+    lightIntensity: 3,
     lightPosX: 5,
     lightPosY: 5,
     lightPosZ: 5,
@@ -213,7 +213,7 @@ export default function Home() {
     modelPosY: 0,
     modelPosZ: 0,
     modelRotX: 0,
-    modelRotY: Math.PI/1.3,
+    modelRotY: Math.PI/1.45,
     modelRotZ: 0,
   });
 
@@ -223,7 +223,7 @@ export default function Home() {
     polar: Math.PI / 2,
     targetX: 0,
     targetY: .8,
-    targetZ: 0,
+    targetZ: -.1,
     fov: 65,
   });
 
