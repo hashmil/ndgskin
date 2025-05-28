@@ -1,39 +1,20 @@
 services:
   skins3d:
-    container_name: skins3d
-    image: git.lionx.me/hash/skins3d
+    container_name: samskins
+    image: git.lionx.me/aborady/samskins:latest
     ports:
       - "3000:3000"
     environment:
       NODE_ENV: production
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       FAL_API_KEY: ${FAL_API_KEY}
-      NEXT_PUBLIC_ACCESS_PASSWORD: ${NEXT_PUBLIC_ACCESS_PASSWORD}
+      ACCESS_PASSWORD: ${ACCESS_PASSWORD}
+      SHOW_CONTROLS: false
       PORT: 3000
     restart: unless-stopped
     networks:
       - npm
-  
-  skinsDb:
-    container_name: skins-db
-    restart: always
-    image: postgres:17
-    environment:
-      POSTGRES_USER: ${DATABASE_USERNAME}
-      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
-      POSTGRES_DB: ${DATABASE_NAME}
-    volumes:
-      - skins-db-data:/var/lib/postgresql/data/
-    ports:
-      - "5432:5432"
-    networks:
-      - npm
-
 networks:
   npm:
-    external: true
-volumes:
-  skins-db-data:
-    name: skins-db-data
     external: true
 

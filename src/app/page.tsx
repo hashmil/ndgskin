@@ -252,7 +252,7 @@ export default function Home() {
     targetX: 0,
     targetY: .8,
     targetZ: -.1,
-    fov: 65,
+    fov: 70,
   });
 
   // Save lighting settings to localStorage whenever they change

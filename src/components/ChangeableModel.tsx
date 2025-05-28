@@ -196,7 +196,7 @@ export const ChangeableModel = React.memo(function ChangeableModel({
           const dominantColors = getDominantColors(loadedTexture.image);
           console.log("Dominant colors:", dominantColors);
 
-          // Load screen base texture and create gradient multiply effect
+          // Load screen base texture and use generated image directly with 4x scale
           textureLoader.load("/textures/screen-bw.jpg", (loadedScreenTexture) => {
             console.log("Screen base texture loaded successfully");
             loadedScreenTexture.flipY = false;
@@ -208,99 +208,88 @@ export const ChangeableModel = React.memo(function ChangeableModel({
             blendCanvas.height = loadedScreenTexture.image.height;
             
             if (blendCtx) {
-              // First, draw the screen-bw.jpg as base
-              blendCtx.drawImage(loadedScreenTexture.image, 0, 0, blendCanvas.width, blendCanvas.height);
+              // Draw the generated texture directly at 4x scale as background
+              const sourceSize = Math.min(loadedTexture.image.width, loadedTexture.image.height);
+              const targetSize = sourceSize * 4; // 4x scale
               
-              // Create gradient canvas
-              const gradientCanvas = document.createElement('canvas');
-              const gradientCtx = gradientCanvas.getContext('2d');
-              gradientCanvas.width = blendCanvas.width;
-              gradientCanvas.height = blendCanvas.height;
+              // Center the scaled texture
+              const offsetX = (blendCanvas.width - targetSize) / 2;
+              const offsetY = (blendCanvas.height - targetSize) / 2;
               
-              if (gradientCtx) {
-                // Create vertical gradient from dominant colors
-                const gradient = gradientCtx.createLinearGradient(0, 0, 0, gradientCanvas.height);
-                gradient.addColorStop(0, `rgb(${dominantColors.color1.r * 255}, ${dominantColors.color1.g * 255}, ${dominantColors.color1.b * 255})`);
-                gradient.addColorStop(1, `rgb(${dominantColors.color2.r * 255}, ${dominantColors.color2.g * 255}, ${dominantColors.color2.b * 255})`);
-                
-                gradientCtx.fillStyle = gradient;
-                gradientCtx.fillRect(0, 0, gradientCanvas.width, gradientCanvas.height);
-                
-                // Manual pixel-level multiplication of screen texture with gradient
-                const screenImageData = blendCtx.getImageData(0, 0, blendCanvas.width, blendCanvas.height);
-                const gradientImageData = gradientCtx.getImageData(0, 0, gradientCanvas.width, gradientCanvas.height);
-                const resultImageData = blendCtx.createImageData(blendCanvas.width, blendCanvas.height);
-                
-                for (let i = 0; i < screenImageData.data.length; i += 4) {
-                  // Multiply each RGB channel (0-255 values)
-                  resultImageData.data[i] = (screenImageData.data[i] * gradientImageData.data[i]) / 255;     // Red
-                  resultImageData.data[i + 1] = (screenImageData.data[i + 1] * gradientImageData.data[i + 1]) / 255; // Green
-                  resultImageData.data[i + 2] = (screenImageData.data[i + 2] * gradientImageData.data[i + 2]) / 255; // Blue
-                  resultImageData.data[i + 3] = 255; // Alpha (fully opaque)
-                }
-                
-                // Clear canvas and draw the multiplied result
-                blendCtx.clearRect(0, 0, blendCanvas.width, blendCanvas.height);
-                blendCtx.putImageData(resultImageData, 0, 0);
-                
-                // Add phone-style clock overlay
-                const now = new Date();
-                const hours = now.getHours().toString().padStart(2, '0');
-                const minutes = now.getMinutes().toString().padStart(2, '0');
-                
-                // Get day and date
-                const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                const dayOfWeek = dayNames[now.getDay()];
-                const dayOfMonth = now.getDate();
-                const month = monthNames[now.getMonth()];
-                const dateString = `${dayOfWeek} ${dayOfMonth} ${month}`;
-                
-                // Set up text styling for time (vertical format like reference) - no overlay
-                blendCtx.globalCompositeOperation = 'source-over';
-                blendCtx.fillStyle = 'rgba(255, 255, 255, 0.3)'; // Much more transparent white
-                blendCtx.strokeStyle = 'rgba(0, 0, 0, 0.1)'; // Very subtle stroke
-                blendCtx.lineWidth = 0.5;
-                blendCtx.textAlign = 'center';
-                blendCtx.textBaseline = 'middle';
-                
-                // Calculate font sizes - bigger overall
-                const timeFontSize = Math.min(blendCanvas.width / 3, blendCanvas.height / 4.5);
-                const dateFontSize = timeFontSize / 6; // Much smaller date
-                
-                // Position for vertical time display
-                const centerX = blendCanvas.width / 2;
-                const timeStartY = blendCanvas.height / 5;
-                const lineHeight = timeFontSize * 0.8;
-                
-                // Draw time vertically (like reference: 02 on top, 34 below)
-                try {
-                  // Try to load RobotoMono-Light, fallback to monospace
-                  blendCtx.font = `300 ${timeFontSize}px RobotoMono-Light, 'Roboto Mono', monospace`;
-                } catch (e) {
-                  blendCtx.font = `300 ${timeFontSize}px 'Roboto Mono', Consolas, monospace`;
-                }
-                
-                // Draw hours
-                blendCtx.strokeText(hours, centerX, timeStartY);
-                blendCtx.fillText(hours, centerX, timeStartY);
-                
-                // Draw minutes below hours
-                blendCtx.strokeText(minutes, centerX, timeStartY + lineHeight);
-                blendCtx.fillText(minutes, centerX, timeStartY + lineHeight);
-                
-                // Draw date below time with tight letter spacing
-                blendCtx.font = `400 ${dateFontSize}px 'Roboto Mono', monospace`;
-                blendCtx.fillStyle = 'rgba(255, 255, 255, 0.2)'; // Even more transparent for date
-                blendCtx.strokeStyle = 'rgba(0, 0, 0, 0.05)'; // Almost no stroke
-                blendCtx.letterSpacing = '-0.5px'; // Tighter letter spacing
-                
-                const dateY = timeStartY + lineHeight * 1.8;
-                blendCtx.strokeText(dateString, centerX, dateY);
-                blendCtx.fillText(dateString, centerX, dateY);
-                
-                console.log(`Created gradient-multiplied screen texture with phone clock: ${hours}:${minutes}, ${dateString}`);
+              // Draw the generated texture scaled 4x with very dark opacity
+              blendCtx.globalAlpha = 0.05; // Extremely dark - only 5% opacity
+              blendCtx.drawImage(
+                loadedTexture.image, 
+                0, 0, sourceSize, sourceSize, // Source rectangle (square crop)
+                offsetX, offsetY, targetSize, targetSize // Destination rectangle (4x scaled)
+              );
+              
+              // Add dark overlay to further dim the image
+              blendCtx.globalAlpha = 0.2; // Dark overlay at 70% opacity
+              blendCtx.fillStyle = 'rgba(0, 0, 0, 1)'; // Black overlay
+              blendCtx.fillRect(0, 0, blendCanvas.width, blendCanvas.height);
+              
+              blendCtx.globalAlpha = 1.0; // Reset alpha for clock overlay
+              
+              console.log(`Applied generated texture to screen at 4x scale (${targetSize}px from ${sourceSize}px) with 5% opacity and dark overlay`);
+              
+              // Add phone-style clock overlay
+              const now = new Date();
+              const hours = now.getHours().toString().padStart(2, '0');
+              const minutes = now.getMinutes().toString().padStart(2, '0');
+              
+              // Get day and date
+              const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+              const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+              const dayOfWeek = dayNames[now.getDay()];
+              const dayOfMonth = now.getDate();
+              const month = monthNames[now.getMonth()];
+              const dateString = `${dayOfWeek} ${dayOfMonth} ${month}`;
+              
+              // Set up text styling for time (vertical format like reference) - no overlay
+              blendCtx.globalCompositeOperation = 'source-over';
+              blendCtx.fillStyle = 'rgba(255, 255, 255, 0.3)'; // Much more transparent white
+              blendCtx.strokeStyle = 'rgba(0, 0, 0, 0.1)'; // Very subtle stroke
+              blendCtx.lineWidth = 0.5;
+              blendCtx.textAlign = 'center';
+              blendCtx.textBaseline = 'middle';
+              
+              // Calculate font sizes - bigger overall
+              const timeFontSize = Math.min(blendCanvas.width / 3, blendCanvas.height / 4.5);
+              const dateFontSize = timeFontSize / 6; // Much smaller date
+              
+              // Position for vertical time display
+              const centerX = blendCanvas.width / 2;
+              const timeStartY = blendCanvas.height / 5;
+              const lineHeight = timeFontSize * 0.8;
+              
+              // Draw time vertically (like reference: 02 on top, 34 below)
+              try {
+                // Try to load RobotoMono-Light, fallback to monospace
+                blendCtx.font = `300 ${timeFontSize}px RobotoMono-Light, 'Roboto Mono', monospace`;
+              } catch (e) {
+                blendCtx.font = `300 ${timeFontSize}px 'Roboto Mono', Consolas, monospace`;
               }
+              
+              // Draw hours
+              blendCtx.strokeText(hours, centerX, timeStartY);
+              blendCtx.fillText(hours, centerX, timeStartY);
+              
+              // Draw minutes below hours
+              blendCtx.strokeText(minutes, centerX, timeStartY + lineHeight);
+              blendCtx.fillText(minutes, centerX, timeStartY + lineHeight);
+              
+              // Draw date below time with tight letter spacing
+              blendCtx.font = `400 ${dateFontSize}px 'Roboto Mono', monospace`;
+              blendCtx.fillStyle = 'rgba(255, 255, 255, 0.2)'; // Even more transparent for date
+              blendCtx.strokeStyle = 'rgba(0, 0, 0, 0.05)'; // Almost no stroke
+              blendCtx.letterSpacing = '-0.5px'; // Tighter letter spacing
+              
+              const dateY = timeStartY + lineHeight * 1.8;
+              blendCtx.strokeText(dateString, centerX, dateY);
+              blendCtx.fillText(dateString, centerX, dateY);
+              
+              console.log(`Created screen texture with scaled generated image and phone clock: ${hours}:${minutes}, ${dateString}`);
             }
             
             // Create final texture from blended canvas
